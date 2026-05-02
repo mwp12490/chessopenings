@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chess Openings Trainer</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">&#9812;</span>
+      <h1>Chess Openings Trainer</h1>
+    </div>
+    <nav class="modes" id="modes">
+      <button data-mode="identify" class="mode active">Identify Opening</button>
+      <button data-mode="setup" class="mode">Set Up Opening</button>
+      <button data-mode="explore" class="mode">Explore</button>
+      <button data-mode="analysis" class="mode">Engine Analysis</button>
+    </nav>
+    <div class="score">
+      <span class="score-label">Score</span>
+      <span id="score">0 / 0</span>
+      <button id="reset-score" title="Reset score">&#x21bb;</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="board-wrap">
+      <div class="board-shell">
+        <div id="board" class="board"></div>
+        <div id="board-overlay" class="board-overlay hidden"></div>
+      </div>
+      <div class="board-controls">
+        <button id="flip-board" title="Flip board">&#x21c5; Flip</button>
+        <button id="reset-board" title="Reset to start position">Reset</button>
+        <span class="turn-indicator" id="turn-indicator">White to move</span>
+      </div>
+    </section>
+
+    <aside class="panel" id="panel">
+      <!-- Mode-specific UI is rendered here -->
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <span class="engine-status">
+      <span class="dot" id="engine-dot"></span>
+      <span id="engine-status">Stockfish: idle</span>
+    </span>
+    <span class="hint">Built with chess.js + Stockfish</span>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="js/openings.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
