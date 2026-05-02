@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - claude/chess-openings-trainer-1evIs
+      - claude/add-session-description-nxbJg
       - main
   workflow_dispatch:
 
@@ -18,7 +19,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
       - name: Install dependencies
         run: npm install
