@@ -1,9 +1,8 @@
-// Stockfish integration via Web Worker. We fetch the engine from a CDN as text
-// and wrap it in a Blob worker so cross-origin classic worker rules apply
-// uniformly across hosts.
+// Stockfish integration via Web Worker. The engine is vendored locally in
+// vendor/stockfish.js so the app works offline and from a file:// origin
+// (e.g. inside an Electron BrowserWindow).
 
-const STOCKFISH_URL =
-  "https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js";
+const STOCKFISH_URL = "vendor/stockfish.js";
 
 class Engine {
   constructor() {
@@ -19,12 +18,7 @@ class Engine {
   async init() {
     this._setStatus("loading", "Loading Stockfish…");
     try {
-      const res = await fetch(STOCKFISH_URL);
-      if (!res.ok) throw new Error("Failed to fetch Stockfish: " + res.status);
-      const code = await res.text();
-      const blob = new Blob([code], { type: "application/javascript" });
-      const url = URL.createObjectURL(blob);
-      this.worker = new Worker(url);
+      this.worker = new Worker(STOCKFISH_URL);
       this.worker.onmessage = (e) => this._onMessage(e.data);
       this.worker.onerror = (e) => {
         this._setStatus("error", "Stockfish error: " + (e.message || "unknown"));

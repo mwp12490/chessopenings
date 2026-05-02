@@ -1,95 +1,94 @@
-# Chess Openings Trainer
+# Chess Openings Trainer (Mac App)
 
-A self-contained web app that helps you learn chess openings by name and by
-move-order. Built with [chess.js](https://github.com/jhlywa/chess.js) for move
-validation and [Stockfish](https://stockfishchess.org/) (loaded as a Web
-Worker) for engine analysis.
+A native-feeling Mac desktop app that trains you on chess openings, powered
+by the Stockfish engine.
 
-## Features
+## Run it on your MacBook
 
-- **Identify Opening** — see a position on the board, pick its name from four
-  choices.
-- **Set Up Opening** — see the opening's name, play the moves on the board to
-  reproduce the canonical line. Hint and "show solution" available.
-- **Explore** — browse 60+ named openings with searchable list, step through
-  each move, and see ECO codes plus descriptions.
-- **Engine Analysis** — free-play board with continuous Stockfish evaluation,
-  best-line preview, and FEN load/undo.
-- **Score tracking** — running correct/total ratio persisted in localStorage.
-- **Drag-and-drop & click-to-move** with last-move highlights, legal-square
-  dots, and a flippable board.
+You need [Node.js](https://nodejs.org/) installed (any recent LTS, e.g. 20+).
+Check by running `node -v` in Terminal — if it prints a version, you're good.
 
-## Database
-
-The app currently ships with these opening families:
-
-- King's-pawn classics: Italian Game, Giuoco Piano, Evans Gambit, Two Knights,
-  Ruy Lopez (incl. Berlin), Scotch, Four Knights, Vienna, King's Gambit,
-  Bishop's Opening, Center Game, Danish Gambit, Petrov, Philidor, Latvian.
-- Sicilian: main Sicilian plus Najdorf, Dragon, Sveshnikov, Scheveningen,
-  Taimanov, Kan, Accelerated Dragon, Alapin, Closed, Smith-Morra, Grand Prix.
-- 1.e4 alternatives: French (Advance/Winawer/Tarrasch/Exchange), Caro-Kann
-  (Classical/Advance/Panov), Scandinavian, Pirc, Modern, Alekhine,
-  Nimzowitsch.
-- Queen's-pawn: Queen's Gambit (Accepted/Declined), Slav, Semi-Slav, Albin,
-  King's Indian, Grünfeld, Nimzo-/Queen's-/Bogo-Indian, Catalan, Benoni,
-  Modern Benoni, Benko, Dutch, London, Trompowsky, Torre, Colle, Veresov.
-- Flank: English, Réti, King's Indian Attack, Bird, Larsen, Sokolsky, Grob.
-
-You can extend the list by editing [`js/openings.js`](js/openings.js). The
-startup pass calls `validateOpenings()` which logs any opening whose move
-sequence chess.js can't parse — so typos surface immediately in the console.
-
-## Running locally
-
-The app is plain static HTML/JS, but it must be served over HTTP(S) (not
-opened with `file://`) because:
-
-1. The Stockfish engine is fetched from a CDN and wrapped in a Blob Web
-   Worker, which fails under the `file://` origin.
-2. localStorage persistence is per-origin.
-
-Pick any static server. Examples:
+Then, in Terminal:
 
 ```bash
-# Python 3
-python3 -m http.server 8000
-
-# Node (no install)
-npx --yes serve .
-
-# PHP
-php -S localhost:8000
+git clone <this-repo-url> chess-openings-trainer
+cd chess-openings-trainer
+npm install
+npm start
 ```
 
-Then open http://localhost:8000/.
+That opens the trainer in its own window. Quit with **⌘Q**.
 
-## Stockfish version
+> The first `npm install` downloads Electron (~100 MB). After that, `npm
+> start` launches instantly.
 
-The app loads `stockfish.js@10.0.2` from jsDelivr — a pure-JS build that runs
-in any modern browser without needing `SharedArrayBuffer` or special HTTP
-headers. To swap in a newer NNUE build, change `STOCKFISH_URL` in
-[`js/engine.js`](js/engine.js) and configure your host with the required
-`Cross-Origin-Opener-Policy: same-origin` and
-`Cross-Origin-Embedder-Policy: require-corp` headers if the build needs
-threads/SharedArrayBuffer.
+## Build a `.app` bundle / `.dmg` installer
+
+If you want a permanent app you can drag into `/Applications`:
+
+```bash
+npm run dist:mac
+```
+
+This produces (in `dist/`):
+
+- `Chess Openings Trainer-1.0.0-arm64.dmg` — drag-to-install image (Apple Silicon)
+- `Chess Openings Trainer-1.0.0.dmg` — Intel Mac version
+- `mac-arm64/Chess Openings Trainer.app` — the bare app bundle
+
+Open the `.dmg` and drag the app into Applications. macOS Gatekeeper will
+warn the first time because the app isn't code-signed (only matters if you
+distribute it). To open it anyway: right-click → **Open**, then confirm.
+
+## What's inside
+
+Four modes, switchable via the tabs at the top:
+
+| Mode | What you do |
+|------|-------------|
+| **Identify Opening** | Look at the board, pick the opening's name from four choices. |
+| **Set Up Opening** | Read the opening's name, drag pieces to reproduce its main line. Hint and "Show solution" available. |
+| **Explore** | Browse 70 named openings with search, descriptions, and step-through. |
+| **Engine Analysis** | Free-play board with live Stockfish evaluation, eval bar, and best-line preview. |
+
+Score (correct/total) is saved between sessions.
+
+## Tech
+
+- **Electron** — desktop window
+- **chess.js** — move legality and SAN parsing (vendored at `vendor/chess.min.js`)
+- **Stockfish.js 10** — engine, runs as a Web Worker (vendored at `vendor/stockfish.js`)
+- Plain HTML/CSS/JS for the UI — no build step
+
+Everything runs locally; no internet needed after `npm install`.
 
 ## Project layout
 
 ```
-index.html           # Page shell + script load order
-css/styles.css       # Dark theme, board, panel, status bar
-js/openings.js       # Openings database + helpers (FEN-from-moves, validate)
-js/board.js          # Visual chess board (click + drag)
-js/engine.js         # Stockfish Web Worker wrapper
+electron/main.js     # Electron main process — creates the window
+index.html           # The page Electron loads
+css/styles.css       # Dark theme, board, panels
+vendor/chess.min.js  # chess.js move logic
+vendor/stockfish.js  # Stockfish engine (Web Worker)
+js/openings.js       # 70-opening database + helpers
+js/board.js          # Visual chess board (drag + click)
+js/engine.js         # Stockfish wrapper
 js/app.js            # Mode dispatcher and UI rendering
 ```
 
-## Notes
+## Adding more openings
 
-- Setup mode enforces the canonical move order. Some openings transpose; if
-  you want loose matching, swap the SAN compare in `handleSetupMoveAttempt`
-  for a position-based check (compare FEN of resulting position to the
-  opening's expected FEN at that ply).
-- The score counts a setup attempt as correct only if you reach the final
-  position with no rejected moves.
+Edit `js/openings.js`. Each entry is:
+
+```js
+{
+  name: "Opening Name",
+  eco: "A00",
+  moves: ["e4", "e5", "Nf3"],     // SAN moves in order
+  description: "Short blurb.",
+  aliases: ["Other Name"]          // optional
+}
+```
+
+The app validates every opening's move sequence against chess.js at startup;
+typos are logged to the DevTools console (View → Toggle Developer Tools).
