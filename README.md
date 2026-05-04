@@ -3,12 +3,39 @@
 A native-feeling Mac desktop app that trains you on chess openings, powered
 by the Stockfish engine.
 
-## Run it on your MacBook
+## Install on your MacBook (no setup, no Terminal)
 
-You need [Node.js](https://nodejs.org/) installed (any recent LTS, e.g. 20+).
-Check by running `node -v` in Terminal — if it prints a version, you're good.
+Every push to this repo triggers a GitHub Actions build that produces a
+ready-to-install `.dmg`. To get it:
 
-Then, in Terminal:
+1. Open the repo's **Actions** tab on GitHub.
+2. Click the most recent **Build Mac App** run that has a green check.
+3. Scroll to the **Artifacts** section at the bottom and download
+   `chess-openings-trainer-mac` — it's a `.zip`.
+4. Unzip it. You'll see two `.dmg` files:
+   - `Chess Openings Trainer-1.0.0-arm64.dmg` — for Apple Silicon Macs (M1/M2/M3/M4).
+   - `Chess Openings Trainer-1.0.0.dmg` — for Intel Macs.
+   Not sure which? Click the Apple menu → **About This Mac**. If it says
+   "Apple M…", use the `arm64` one.
+5. Double-click the `.dmg`, then drag **Chess Openings Trainer** into the
+   **Applications** folder.
+6. Open Applications and double-click the app. The first time, macOS will say
+   it can't be opened because it's from an unidentified developer (the app
+   isn't code-signed). Bypass it: **right-click the app → Open → Open**.
+   You only have to do this once.
+
+Quit with **⌘Q**.
+
+## Run from source (for developers)
+
+This path requires Node.js. If `npm install` gives you `command not found: npm`,
+you don't have Node.js yet — install it from
+[nodejs.org](https://nodejs.org/en/download) (download the macOS installer,
+double-click, follow the prompts). Then close and reopen Terminal.
+
+Verify with `node -v` — it should print something like `v20.x.x`.
+
+Then:
 
 ```bash
 git clone <this-repo-url> chess-openings-trainer
@@ -17,28 +44,16 @@ npm install
 npm start
 ```
 
-That opens the trainer in its own window. Quit with **⌘Q**.
+That opens the trainer in its own window. The first `npm install` downloads
+Electron (~100 MB); after that, `npm start` launches instantly.
 
-> The first `npm install` downloads Electron (~100 MB). After that, `npm
-> start` launches instantly.
-
-## Build a `.app` bundle / `.dmg` installer
-
-If you want a permanent app you can drag into `/Applications`:
+To build the `.dmg` yourself instead of using the GitHub Actions build:
 
 ```bash
 npm run dist:mac
 ```
 
-This produces (in `dist/`):
-
-- `Chess Openings Trainer-1.0.0-arm64.dmg` — drag-to-install image (Apple Silicon)
-- `Chess Openings Trainer-1.0.0.dmg` — Intel Mac version
-- `mac-arm64/Chess Openings Trainer.app` — the bare app bundle
-
-Open the `.dmg` and drag the app into Applications. macOS Gatekeeper will
-warn the first time because the app isn't code-signed (only matters if you
-distribute it). To open it anyway: right-click → **Open**, then confirm.
+Output lands in `dist/`.
 
 ## What's inside
 
