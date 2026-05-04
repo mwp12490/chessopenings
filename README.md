@@ -12,11 +12,10 @@ ready-to-install `.dmg`. To get it:
 2. Click the most recent **Build Mac App** run that has a green check.
 3. Scroll to the **Artifacts** section at the bottom and download
    `chess-openings-trainer-mac` — it's a `.zip`.
-4. Unzip it. You'll see two `.dmg` files:
-   - `Chess Openings Trainer-1.0.0-arm64.dmg` — for Apple Silicon Macs (M1/M2/M3/M4).
-   - `Chess Openings Trainer-1.0.0.dmg` — for Intel Macs.
-   Not sure which? Click the Apple menu → **About This Mac**. If it says
-   "Apple M…", use the `arm64` one.
+4. Unzip it. Inside is `Chess Openings Trainer-1.0.0-arm64.dmg`. This
+   build is for **Apple Silicon Macs only** (M1/M2/M3/M4). To check
+   yours: Apple menu → **About This Mac** — it should say "Apple M…".
+   Intel Macs aren't covered by this build; see "Run from source" below.
 5. Double-click the `.dmg`, then drag **Chess Openings Trainer** into the
    **Applications** folder.
 6. Open Applications and double-click the app. The first time, macOS will say

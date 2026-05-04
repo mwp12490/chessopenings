@@ -21,17 +21,19 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build Mac app (.dmg + .zip, unsigned)
+      - name: Build Mac app (.dmg, unsigned, arm64)
         run: npm run dist:mac
         env:
           # Skip code-signing — produces an unsigned build.
           # macOS will warn on first launch; right-click → Open to bypass.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          DEBUG: electron-builder
 
       - name: List build output
-        run: ls -la dist/
+        if: always()
+        run: ls -la dist/ || true
 
       - name: Upload Mac build artifacts
         uses: actions/upload-artifact@v4
@@ -40,5 +42,4 @@ jobs:
           if-no-files-found: error
           path: |
             dist/*.dmg
-            dist/*.zip
             dist/*.blockmap
