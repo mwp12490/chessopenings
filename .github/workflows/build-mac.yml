@@ -21,10 +21,12 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci 2>&1 | tee install.log
 
       - name: Build Mac app (.dmg, unsigned, arm64)
-        run: npm run dist:mac
+        run: |
+          set -o pipefail
+          npm run dist:mac 2>&1 | tee build.log
         env:
           # Skip code-signing — produces an unsigned build.
           # macOS will warn on first launch; right-click → Open to bypass.
@@ -36,6 +38,7 @@ jobs:
         run: ls -la dist/ || true
 
       - name: Upload Mac build artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: chess-openings-trainer-mac
@@ -43,3 +46,13 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.blockmap
+
+      - name: Upload build logs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          if-no-files-found: ignore
+          path: |
+            install.log
+            build.log
