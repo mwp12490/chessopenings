@@ -77,6 +77,7 @@
     else if (mode === "setup") startSetup();
     else if (mode === "explore") startExplore();
     else if (mode === "analysis") startAnalysis();
+    else if (mode === "stats") startStats();
   }
 
   // ===== Identify Opening Mode =====
@@ -243,6 +244,127 @@
     renderPanel();
   }
 
+  // ===== Stats Mode =====
+  function startStats() {
+    // Park the board on the start position so the left side isn't stale.
+    game.reset();
+    board.setOrientation("white");
+    board.setPosition(game.board(), null);
+    updateTurnIndicator();
+    renderPanel();
+  }
+
+  const ECO_FAMILY_LABELS = {
+    A: "Flank openings",
+    B: "Semi-open games",
+    C: "Open games",
+    D: "Closed games",
+    E: "Indian defenses"
+  };
+
+  function renderStatsPanel() {
+    panelEl.innerHTML = "";
+    const h = document.createElement("h2");
+    h.textContent = "Stats";
+    panelEl.appendChild(h);
+
+    const sub = document.createElement("div");
+    sub.className = "subtitle";
+    sub.textContent = "Your spaced-repetition progress across the openings deck.";
+    panelEl.appendChild(sub);
+
+    const deck = SRS.deckStats(OPENINGS);
+    const fc = SRS.forecast(OPENINGS);
+    const hardest = SRS.hardest(OPENINGS, 5);
+    const eco = SRS.byEco(OPENINGS);
+
+    panelEl.appendChild(renderDeckSummary(deck));
+    panelEl.appendChild(renderForecast(fc));
+    panelEl.appendChild(renderEcoBreakdown(eco));
+    panelEl.appendChild(renderHardest(hardest));
+  }
+
+  function renderDeckSummary(s) {
+    const known = s.nYoung + s.nMature;
+    const seg = (n, cls, label) => n > 0
+      ? `<div class="bucket-seg ${cls}" style="flex:${n}" title="${label}: ${n}"></div>`
+      : "";
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    wrap.innerHTML = `
+      <div class="stats-row">
+        <div class="stat"><span class="big">${known}</span><span class="lab">/ ${s.total} known</span></div>
+        <div class="stat"><span class="big">${s.nDue}</span><span class="lab">due now</span></div>
+        <div class="stat"><span class="big">${s.nNew}</span><span class="lab">new</span></div>
+      </div>
+      <div class="bucket-bar">
+        ${seg(s.nMature, "mature", "Mature (≥21d)")}
+        ${seg(s.nYoung, "young", "Young (<21d)")}
+        ${seg(s.nLearning, "learning", "Learning")}
+        ${seg(s.nNew, "new", "New")}
+      </div>
+      <div class="bucket-legend">
+        <span><i class="dot mature"></i>Mature ${s.nMature}</span>
+        <span><i class="dot young"></i>Young ${s.nYoung}</span>
+        <span><i class="dot learning"></i>Learning ${s.nLearning}</span>
+        <span><i class="dot new"></i>New ${s.nNew}</span>
+      </div>
+    `;
+    return wrap;
+  }
+
+  function renderForecast(fc) {
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    wrap.innerHTML = `
+      <div class="stats-h3">Coming up</div>
+      <div class="stats-row">
+        <div class="stat"><span class="big">${fc.today}</span><span class="lab">today</span></div>
+        <div class="stat"><span class="big">${fc.tomorrow}</span><span class="lab">tomorrow</span></div>
+        <div class="stat"><span class="big">${fc.week}</span><span class="lab">rest of week</span></div>
+      </div>
+    `;
+    return wrap;
+  }
+
+  function renderEcoBreakdown(eco) {
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    let rows = "";
+    for (const fam of ["A", "B", "C", "D", "E"]) {
+      const g = eco[fam];
+      if (!g || g.total === 0) continue;
+      const pct = Math.round((g.known / g.total) * 100);
+      rows += `
+        <div class="eco-row">
+          <div class="eco-name">${ECO_FAMILY_LABELS[fam]} <span class="eco-tag">(${fam})</span></div>
+          <div class="eco-bar"><div style="width:${pct}%"></div></div>
+          <div class="eco-count">${g.known}/${g.total}</div>
+        </div>`;
+    }
+    wrap.innerHTML = `<div class="stats-h3">By family</div>${rows}`;
+    return wrap;
+  }
+
+  function renderHardest(items) {
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    let body;
+    if (items.length === 0) {
+      body = `<div class="subtitle">No struggle data yet — answer a few wrong to populate this.</div>`;
+    } else {
+      body = items.map(({ opening, card }) => `
+        <div class="hard-row">
+          <span class="eco">${opening.eco}</span>
+          <span class="hard-name">${escapeHtml(opening.name)}</span>
+          <span class="hard-meta">${card.lapses} lapse${card.lapses === 1 ? "" : "s"} · ease ${card.ease.toFixed(2)}</span>
+        </div>
+      `).join("");
+    }
+    wrap.innerHTML = `<div class="stats-h3">Your hardest openings</div>${body}`;
+    return wrap;
+  }
+
   // ===== Engine Analysis Mode =====
   function startAnalysis() {
     game.reset();
@@ -298,6 +420,7 @@
     if (currentMode === "setup") return renderSetupPanel();
     if (currentMode === "explore") return renderExplorePanel();
     if (currentMode === "analysis") return renderAnalysisPanel();
+    if (currentMode === "stats") return renderStatsPanel();
   }
 
   function renderIdentifyPanel(isAfterAnswer) {

@@ -84,5 +84,66 @@
     return card;
   }
 
-  window.SRS = { pickNext, review };
+  // ===== Stats =====
+
+  // Counts by mastery bucket. interval thresholds borrowed from Anki:
+  // young = seen and graduated but interval < 21d, mature = >= 21d.
+  function deckStats(pool) {
+    const now = Date.now();
+    let nNew = 0, nLearning = 0, nYoung = 0, nMature = 0, nDue = 0;
+    for (const o of pool) {
+      const c = state[o.name];
+      if (!c) { nNew++; continue; }
+      if (c.due <= now) nDue++;
+      if (c.reps === 0) nLearning++;
+      else if (c.interval < 21) nYoung++;
+      else nMature++;
+    }
+    return { nNew, nLearning, nYoung, nMature, nDue, total: pool.length };
+  }
+
+  // Top N openings you struggle with: most lapses first, then lowest ease.
+  // Excludes cards you've barely seen (reps + lapses < 2) so the list is signal.
+  function hardest(pool, n) {
+    return pool
+      .map(o => ({ opening: o, card: state[o.name] }))
+      .filter(x => x.card && (x.card.lapses + x.card.reps) >= 2 && x.card.lapses > 0)
+      .sort((a, b) => (b.card.lapses - a.card.lapses) || (a.card.ease - b.card.ease))
+      .slice(0, n || 5);
+  }
+
+  // Mastery breakdown by ECO family letter (A–E).
+  // "known" = card exists and has at least one successful rep.
+  function byEco(pool) {
+    const groups = {};
+    for (const fam of ["A", "B", "C", "D", "E"]) groups[fam] = { known: 0, total: 0 };
+    for (const o of pool) {
+      const fam = (o.eco || "")[0];
+      if (!groups[fam]) continue;
+      groups[fam].total++;
+      const c = state[o.name];
+      if (c && c.reps >= 1) groups[fam].known++;
+    }
+    return groups;
+  }
+
+  // Number of cards coming due in upcoming windows.
+  // today = next 24h (includes already-overdue), tomorrow = 24–48h, week = 2–7d.
+  function forecast(pool) {
+    const now = Date.now();
+    const tToday = now + DAY_MS;
+    const tTomorrow = now + 2 * DAY_MS;
+    const tWeek = now + 7 * DAY_MS;
+    let today = 0, tomorrow = 0, week = 0;
+    for (const o of pool) {
+      const c = state[o.name];
+      if (!c) continue;
+      if (c.due <= tToday) today++;
+      else if (c.due <= tTomorrow) tomorrow++;
+      else if (c.due <= tWeek) week++;
+    }
+    return { today, tomorrow, week };
+  }
+
+  window.SRS = { pickNext, review, deckStats, hardest, byEco, forecast };
 })();
