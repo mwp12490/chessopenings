@@ -145,5 +145,6 @@
     return { today, tomorrow, week };
   }
 
-  window.SRS = { pickNext, review, deckStats, hardest, byEco, forecast };
+  window.SRS = { pickNext, review, deckStats, hardest, byEco, forecast,
+    getCard: (name) => state[name] || null };
 })();

@@ -38,7 +38,7 @@
   });
 
   // ===== Mode dispatcher =====
-  let currentMode = "identify";
+  let currentMode = "practice";
   let modeState = {}; // per-mode mutable state
 
   document.getElementById("modes").addEventListener("click", (e) => {
@@ -73,20 +73,28 @@
     }
     overlayEl.classList.add("hidden");
     modeState = {};
-    if (mode === "identify") startIdentify();
-    else if (mode === "setup") startSetup();
+    if (mode === "practice") startPractice();
     else if (mode === "explore") startExplore();
     else if (mode === "analysis") startAnalysis();
     else if (mode === "stats") startStats();
   }
 
-  // ===== Identify Opening Mode =====
-  function startIdentify() {
-    nextIdentifyQuestion();
+  // ===== Practice Mode (mixed identify + setup) =====
+  function startPractice() {
+    nextPracticeQuestion();
   }
 
-  function nextIdentifyQuestion() {
+  function nextPracticeQuestion() {
     const opening = SRS.pickNext(OPENINGS);
+    // Brand-new openings always start as identify so the user sees the
+    // position before being asked to reproduce it from memory.
+    const isNew = !SRS.getCard(opening.name);
+    const useSetup = !isNew && Math.random() < 0.5;
+    if (useSetup) loadSetupCard(opening);
+    else loadIdentifyCard(opening);
+  }
+
+  function loadIdentifyCard(opening) {
     const fen = fenFromMoves(opening.moves);
     game.load(fen);
     // Keep the orientation as White by default
@@ -97,7 +105,7 @@
     const distractors = getRandomOpenings(3, opening);
     const choices = shuffle([opening, ...distractors]);
 
-    modeState = { opening, choices, answered: false };
+    modeState = { questionType: "identify", opening, choices, answered: false };
     renderPanel();
   }
 
@@ -119,17 +127,12 @@
     renderPanel(true);
   }
 
-  // ===== Set Up Opening Mode =====
-  function startSetup() {
-    nextSetupQuestion();
-  }
-
-  function nextSetupQuestion() {
-    const opening = SRS.pickNext(OPENINGS);
+  function loadSetupCard(opening) {
     game.reset();
     board.setOrientation("white");
     board.setPosition(game.board(), null);
     modeState = {
+      questionType: "setup",
       opening,
       moveIndex: 0,
       mistakes: 0,
@@ -409,15 +412,19 @@
 
   // ===== Move handling dispatcher =====
   function handleMoveAttempt(move) {
-    if (currentMode === "setup") return handleSetupMoveAttempt(move);
+    if (currentMode === "practice" && modeState.questionType === "setup") {
+      return handleSetupMoveAttempt(move);
+    }
     if (currentMode === "analysis") return handleAnalysisMoveAttempt(move);
     return false;
   }
 
   // ===== UI rendering =====
   function renderPanel(isAfterAnswer) {
-    if (currentMode === "identify") return renderIdentifyPanel(isAfterAnswer);
-    if (currentMode === "setup") return renderSetupPanel();
+    if (currentMode === "practice") {
+      if (modeState.questionType === "setup") return renderSetupPanel();
+      return renderIdentifyPanel(isAfterAnswer);
+    }
     if (currentMode === "explore") return renderExplorePanel();
     if (currentMode === "analysis") return renderAnalysisPanel();
     if (currentMode === "stats") return renderStatsPanel();
@@ -461,7 +468,7 @@
       const next = document.createElement("button");
       next.className = "btn primary";
       next.textContent = "Next →";
-      next.addEventListener("click", nextIdentifyQuestion);
+      next.addEventListener("click", nextPracticeQuestion);
       actions.appendChild(next);
       panelEl.appendChild(actions);
     } else {
@@ -474,7 +481,7 @@
         score.total++;
         saveScore();
         renderScore();
-        nextIdentifyQuestion();
+        nextPracticeQuestion();
       });
       actions.appendChild(skip);
       panelEl.appendChild(actions);
@@ -504,11 +511,15 @@
       : `Make the next move for ${game.turn() === "w" ? "White" : "Black"} (${moveIndex + 1} / ${opening.moves.length}).`;
     panelEl.appendChild(sub);
 
-    // Move list display with played / next styling
-    const ml = document.createElement("div");
-    ml.className = "move-list";
-    ml.innerHTML = renderMoveListHtml(opening.moves, moveIndex, complete);
-    panelEl.appendChild(ml);
+    // Reveal the move list only after the user completes (or gives up via
+    // "Show solution"). Showing it during the question would just be the
+    // answer key.
+    if (complete) {
+      const ml = document.createElement("div");
+      ml.className = "move-list";
+      ml.innerHTML = renderMoveListHtml(opening.moves, moveIndex, true);
+      panelEl.appendChild(ml);
+    }
 
     const fb = document.createElement("div");
     fb.className = "feedback-slot";
@@ -540,7 +551,7 @@
         saveScore();
         renderScore();
       }
-      nextSetupQuestion();
+      nextPracticeQuestion();
     });
     actions.appendChild(next);
 
@@ -816,5 +827,5 @@
   }
 
   // Kick off
-  setMode("identify");
+  setMode("practice");
 })();
