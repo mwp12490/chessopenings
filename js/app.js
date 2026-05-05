@@ -85,7 +85,7 @@
   }
 
   function nextIdentifyQuestion() {
-    const opening = OPENINGS[Math.floor(Math.random() * OPENINGS.length)];
+    const opening = SRS.pickNext(OPENINGS);
     const fen = fenFromMoves(opening.moves);
     game.load(fen);
     // Keep the orientation as White by default
@@ -112,6 +112,7 @@
     });
     score.total++;
     if (correct) score.correct++;
+    SRS.review(modeState.opening.name, correct ? "good" : "again");
     saveScore();
     renderScore();
     renderPanel(true);
@@ -123,7 +124,7 @@
   }
 
   function nextSetupQuestion() {
-    const opening = OPENINGS[Math.floor(Math.random() * OPENINGS.length)];
+    const opening = SRS.pickNext(OPENINGS);
     game.reset();
     board.setOrientation("white");
     board.setPosition(game.board(), null);
@@ -161,6 +162,7 @@
           modeState.counted = true;
           score.total++;
           if (modeState.mistakes === 0) score.correct++;
+          SRS.review(modeState.opening.name, modeState.mistakes === 0 ? "good" : "again");
           saveScore();
           renderScore();
         }
@@ -199,6 +201,7 @@
     if (!modeState.counted) {
       modeState.counted = true;
       score.total++;
+      SRS.review(modeState.opening.name, "again");
       saveScore();
       renderScore();
     }
