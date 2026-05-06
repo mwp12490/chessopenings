@@ -460,7 +460,7 @@
     if (answered) {
       const fb = document.createElement("div");
       fb.className = "feedback info";
-      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco}). ${escapeHtml(opening.description)}<br/><br/><span style="color:var(--text-dim)">Moves: ${opening.moves.join(" ")}</span>`;
+      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco}). ${escapeHtml(opening.description)}<br/><br/><span style="color:var(--text-dim)">Moves: ${formatNumberedSan(opening.moves)}</span>`;
       panelEl.appendChild(fb);
 
       const actions = document.createElement("div");
@@ -497,9 +497,12 @@
 
     const meta = document.createElement("div");
     meta.className = "opening-meta";
+    // Description can mention specific squares (e.g. "the bishop on c4
+    // targets f7") — those are hints when the user is trying to play
+    // the opening from memory. Hide it until they're done.
     meta.innerHTML = `
       <div class="name"><span class="eco">${opening.eco}</span>${escapeHtml(opening.name)}</div>
-      <div class="desc">${escapeHtml(opening.description)}</div>
+      ${complete ? `<div class="desc">${escapeHtml(opening.description)}</div>` : ""}
       <div class="progress"><div style="width:${(moveIndex / opening.moves.length) * 100}%"></div></div>
     `;
     panelEl.appendChild(meta);
@@ -754,6 +757,16 @@
   }
 
   // ===== Helpers =====
+  function formatNumberedSan(moves) {
+    let s = "";
+    for (let i = 0; i < moves.length; i += 2) {
+      s += (i / 2 + 1) + ". " + moves[i];
+      if (moves[i + 1]) s += " " + moves[i + 1];
+      if (i + 2 < moves.length) s += " ";
+    }
+    return s;
+  }
+
   function renderMoveListHtml(moves, ply, complete) {
     let html = "";
     for (let i = 0; i < moves.length; i += 2) {
