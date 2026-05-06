@@ -745,3 +745,37 @@ body {
 }
 .hard-name { flex: 1; }
 .hard-meta { color: var(--text-dim); font-size: 12px; }
+
+/* ===== Update banner ===== */
+.update-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--accent);
+  color: #15171c;
+  padding: 8px 40px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.update-banner.hidden { display: none; }
+.update-banner a {
+  color: #15171c;
+  text-decoration: underline;
+  font-weight: 700;
+}
+.update-banner button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  color: #15171c;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.update-banner button:hover { opacity: 0.7; }
