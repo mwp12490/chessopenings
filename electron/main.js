@@ -1,6 +1,13 @@
 // Electron main process: opens a BrowserWindow that loads the static app.
-const { app, BrowserWindow, Menu, shell } = require("electron");
+const { app, BrowserWindow, Menu, shell, ipcMain } = require("electron");
 const path = require("path");
+const fs = require("fs");
+const fsp = fs.promises;
+const os = require("os");
+const https = require("https");
+const { spawn, exec } = require("child_process");
+
+let mainWindow = null;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -13,7 +20,8 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      preload: path.join(__dirname, "preload.js")
     }
   });
 
@@ -24,6 +32,8 @@ function createWindow() {
     shell.openExternal(url);
     return { action: "deny" };
   });
+
+  mainWindow = win;
 }
 
 app.whenReady().then(() => {
@@ -62,3 +72,122 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
+
+// ===== In-app updater (macOS only) =====
+// Triggered by the renderer when the user clicks "Install & Restart" on the
+// update banner. Downloads the DMG, mounts it, copies the .app to a staging
+// path, then spawns a detached shell script that — after our app quits —
+// swaps the new bundle into /Applications, strips quarantine, and reopens.
+
+ipcMain.handle("updater:install", async (_event, url) => {
+  if (process.platform !== "darwin") {
+    throw new Error("In-app update is implemented only on macOS.");
+  }
+  if (!url || !/^https:\/\//.test(url)) {
+    throw new Error("Invalid update URL.");
+  }
+
+  const send = (msg) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("updater:progress", msg);
+    }
+  };
+
+  const tmp = os.tmpdir();
+  const stamp = Date.now();
+  const dmgPath = path.join(tmp, `cot-update-${stamp}.dmg`);
+  const mountPoint = path.join(tmp, `cot-mount-${stamp}`);
+  const stagedApp = path.join(tmp, `cot-staged-${stamp}.app`);
+  const installerSh = path.join(tmp, `cot-install-${stamp}.sh`);
+
+  // 1. Download.
+  send("Downloading update…");
+  await downloadHttps(url, dmgPath);
+
+  // 2. Mount.
+  send("Mounting installer…");
+  await execp(`/usr/bin/hdiutil attach ${shq(dmgPath)} -nobrowse -mountpoint ${shq(mountPoint)}`);
+
+  try {
+    // 3. Copy the .app from the mounted DMG to a staging location in /tmp.
+    send("Extracting…");
+    const innerApp = path.join(mountPoint, "Chess Openings Trainer.app");
+    await execp(`/bin/cp -R ${shq(innerApp)} ${shq(stagedApp)}`);
+  } finally {
+    // 4. Always detach the DMG.
+    await execp(`/usr/bin/hdiutil detach ${shq(mountPoint)} -quiet || true`).catch(() => {});
+  }
+
+  // 5. Best-effort cleanup of the downloaded DMG.
+  await fsp.unlink(dmgPath).catch(() => {});
+
+  // 6. Write a small installer script that runs after we quit. It moves the
+  //    staged .app into /Applications, removes the quarantine attr, and
+  //    relaunches.
+  const installerBody = [
+    "#!/bin/bash",
+    "set -e",
+    "sleep 2",
+    'TARGET="/Applications/Chess Openings Trainer.app"',
+    `STAGED=${shq(stagedApp)}`,
+    'rm -rf "$TARGET"',
+    'mv "$STAGED" "$TARGET"',
+    'xattr -cr "$TARGET" 2>/dev/null || true',
+    'open "$TARGET"',
+    ""
+  ].join("\n");
+  await fsp.writeFile(installerSh, installerBody, { mode: 0o755 });
+
+  // 7. Spawn the installer detached so it survives our quit, then quit.
+  send("Restarting…");
+  const child = spawn("/bin/bash", [installerSh], {
+    detached: true,
+    stdio: "ignore"
+  });
+  child.unref();
+
+  setTimeout(() => app.quit(), 200);
+  return { ok: true };
+});
+
+// Follows redirects (GitHub release asset URLs redirect to S3-hosted URLs).
+function downloadHttps(url, dest) {
+  return new Promise((resolve, reject) => {
+    let redirectsLeft = 5;
+    const visit = (currentUrl) => {
+      https.get(currentUrl, { headers: { "User-Agent": "chess-openings-trainer-updater" } }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          if (redirectsLeft-- <= 0) return reject(new Error("Too many redirects"));
+          res.resume();
+          return visit(res.headers.location);
+        }
+        if (res.statusCode !== 200) {
+          res.resume();
+          return reject(new Error("Download failed: HTTP " + res.statusCode));
+        }
+        const file = fs.createWriteStream(dest);
+        res.pipe(file);
+        file.on("finish", () => file.close((err) => err ? reject(err) : resolve()));
+        file.on("error", reject);
+      }).on("error", reject);
+    };
+    visit(url);
+  });
+}
+
+function execp(cmd) {
+  return new Promise((resolve, reject) => {
+    exec(cmd, { maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (err) {
+        err.stderr = stderr;
+        return reject(err);
+      }
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
+// Single-quote-quote a path for a shell command.
+function shq(s) {
+  return "'" + String(s).replace(/'/g, "'\\''") + "'";
+}
