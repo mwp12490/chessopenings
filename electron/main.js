@@ -13,8 +13,8 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
     height: 860,
-    minWidth: 900,
-    minHeight: 640,
+    minWidth: 560,
+    minHeight: 600,
     title: "Chess Openings Trainer",
     backgroundColor: "#16181d",
     webPreferences: {
