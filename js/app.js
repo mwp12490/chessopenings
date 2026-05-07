@@ -94,21 +94,52 @@
   }
 
   // ===== Practice Mode (mixed identify + setup) =====
+  // Question history lets the user step back through past cards. Each entry
+  // records the opening + question type chosen, plus a `graded` flag so we
+  // don't double-grade SRS when reviewing.
+  const questionHistory = [];
+  let historyIndex = -1;
+  const MAX_HISTORY = 50;
+
   function startPractice() {
     nextPracticeQuestion();
   }
 
   function nextPracticeQuestion() {
+    // Walking forward through history (after using "Previous"): just reload.
+    if (historyIndex < questionHistory.length - 1) {
+      historyIndex++;
+      loadHistoryEntry(questionHistory[historyIndex]);
+      return;
+    }
+    // Otherwise pick a new card from the SRS scheduler and append.
     const opening = SRS.pickNext(OPENINGS);
     // Brand-new openings always start as identify so the user sees the
     // position before being asked to reproduce it from memory.
     const isNew = !SRS.getCard(opening.name);
     const useSetup = !isNew && Math.random() < 0.5;
-    if (useSetup) loadSetupCard(opening);
-    else loadIdentifyCard(opening);
+    const entry = { opening, questionType: useSetup ? "setup" : "identify", graded: false };
+    questionHistory.push(entry);
+    historyIndex = questionHistory.length - 1;
+    if (questionHistory.length > MAX_HISTORY) {
+      questionHistory.shift();
+      historyIndex--;
+    }
+    loadHistoryEntry(entry);
   }
 
-  function loadIdentifyCard(opening) {
+  function previousPracticeQuestion() {
+    if (historyIndex <= 0) return;
+    historyIndex--;
+    loadHistoryEntry(questionHistory[historyIndex]);
+  }
+
+  function loadHistoryEntry(entry) {
+    if (entry.questionType === "setup") loadSetupCard(entry.opening, entry);
+    else loadIdentifyCard(entry.opening, entry);
+  }
+
+  function loadIdentifyCard(opening, historyEntry) {
     const fen = fenFromMoves(opening.moves);
     game.load(fen);
     // Keep the orientation as White by default
@@ -119,7 +150,15 @@
     const distractors = getRandomOpenings(3, opening);
     const choices = shuffle([opening, ...distractors]);
 
-    modeState = { questionType: "identify", opening, choices, answered: false };
+    modeState = {
+      questionType: "identify",
+      opening,
+      choices,
+      answered: false,
+      // If we already graded this card on a prior visit, don't grade again.
+      counted: !!(historyEntry && historyEntry.graded),
+      historyEntry: historyEntry || null
+    };
     renderPanel();
   }
 
@@ -133,15 +172,39 @@
       if (b.dataset.name === modeState.opening.name) b.classList.add("correct");
       else if (b === btnEl && !correct) b.classList.add("incorrect");
     });
-    score.total++;
-    if (correct) score.correct++;
-    SRS.review(modeState.opening.name, correct ? "good" : "again");
-    saveScore();
-    renderScore();
+    if (!modeState.counted) {
+      score.total++;
+      if (correct) score.correct++;
+      SRS.review(modeState.opening.name, correct ? "good" : "again");
+      saveScore();
+      renderScore();
+      modeState.counted = true;
+      if (modeState.historyEntry) modeState.historyEntry.graded = true;
+    }
     renderPanel(true);
   }
 
-  function loadSetupCard(opening) {
+  // Convert a just-answered Identify question into a Setup-style practice
+  // for the same opening. SRS already graded; this is pure practice.
+  function tryPlayingMovesAfterIdentify() {
+    const opening = modeState.opening;
+    const historyEntry = modeState.historyEntry;
+    game.reset();
+    board.setPosition(game.board(), null);
+    modeState = {
+      questionType: "setup",
+      opening,
+      moveIndex: 0,
+      mistakes: 0,
+      complete: false,
+      counted: true, // identify already graded the card
+      historyEntry
+    };
+    updateTurnIndicator();
+    renderPanel();
+  }
+
+  function loadSetupCard(opening, historyEntry) {
     game.reset();
     board.setOrientation("white");
     board.setPosition(game.board(), null);
@@ -151,7 +214,8 @@
       moveIndex: 0,
       mistakes: 0,
       complete: false,
-      counted: false
+      counted: !!(historyEntry && historyEntry.graded),
+      historyEntry: historyEntry || null
     };
     updateTurnIndicator();
     renderPanel();
@@ -183,6 +247,7 @@
           SRS.review(modeState.opening.name, modeState.mistakes === 0 ? "good" : "again");
           saveScore();
           renderScore();
+          if (modeState.historyEntry) modeState.historyEntry.graded = true;
         }
         flashOverlay("Correct!", "ok", 900);
       }
@@ -222,6 +287,7 @@
       SRS.review(modeState.opening.name, "again");
       saveScore();
       renderScore();
+      if (modeState.historyEntry) modeState.historyEntry.graded = true;
     }
     updateTurnIndicator();
     renderPanel();
@@ -299,6 +365,26 @@
     panelEl.appendChild(renderForecast(fc));
     panelEl.appendChild(renderEcoBreakdown(eco));
     panelEl.appendChild(renderHardest(hardest));
+    panelEl.appendChild(renderEcoKey());
+  }
+
+  function renderEcoKey() {
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    wrap.innerHTML = `
+      <div class="stats-h3">What's the ECO code?</div>
+      <div class="subtitle" style="margin-bottom:10px">
+        ECO (Encyclopedia of Chess Openings) is the standard chess classification
+        system. Every named opening gets a code from <code>A00</code> to <code>E99</code>.
+        The letter is the family; the number narrows it down.
+      </div>
+      <div class="eco-key-row"><strong>A</strong> — Flank openings: 1.c4 (English), 1.Nf3, 1.b3, etc. Anything not 1.e4 or 1.d4-with-d5/Nf6.</div>
+      <div class="eco-key-row"><strong>B</strong> — Semi-open games: 1.e4 with Black not playing 1…e5 (Sicilian, French, Caro-Kann).</div>
+      <div class="eco-key-row"><strong>C</strong> — Open games + French: 1.e4 e5 (Italian, Spanish, Petroff…) plus the French Defense.</div>
+      <div class="eco-key-row"><strong>D</strong> — Closed + semi-Closed: 1.d4 d5 (Queen's Gambit, Slav) and other 1.d4 lines without an Indian setup.</div>
+      <div class="eco-key-row"><strong>E</strong> — Indian defenses: 1.d4 Nf6 lines (King's Indian, Nimzo-Indian, Queen's Indian, Catalan).</div>
+    `;
+    return wrap;
   }
 
   function renderDeckSummary(s) {
@@ -404,6 +490,7 @@
     board.setPosition(game.board(), modeState.lastMove);
     updateTurnIndicator();
     triggerAnalysis();
+    refreshAnalysisOpeningMeta();
     return true;
   }
 
@@ -417,6 +504,7 @@
     board.setPosition(game.board(), modeState.lastMove);
     updateTurnIndicator();
     triggerAnalysis();
+    refreshAnalysisOpeningMeta();
   }
 
   function analysisStepForward() {
@@ -427,6 +515,7 @@
     board.setPosition(game.board(), modeState.lastMove);
     updateTurnIndicator();
     triggerAnalysis();
+    refreshAnalysisOpeningMeta();
   }
 
   function analysisJumpToStart() {
@@ -436,6 +525,7 @@
     board.setPosition(game.board(), null);
     updateTurnIndicator();
     triggerAnalysis();
+    refreshAnalysisOpeningMeta();
   }
 
   function analysisJumpToEnd() {
@@ -447,6 +537,27 @@
     board.setPosition(game.board(), modeState.lastMove);
     updateTurnIndicator();
     triggerAnalysis();
+    refreshAnalysisOpeningMeta();
+  }
+
+  // Surgically swap out (or remove) the opening-meta block in the analysis
+  // panel without rebuilding the whole panel — keeps the FEN input + eval
+  // slot intact.
+  function refreshAnalysisOpeningMeta() {
+    if (currentMode !== "analysis") return;
+    const existing = panelEl.querySelector(".opening-meta");
+    if (existing) existing.remove();
+    const matched = findMatchingOpening();
+    if (!matched) return;
+    const om = document.createElement("div");
+    om.className = "opening-meta";
+    om.innerHTML = `
+      <div class="name"><span class="eco">${matched.eco}</span>${escapeHtml(matched.name)}</div>
+      <div class="desc">${escapeHtml(matched.description)}</div>
+    `;
+    const arrowsRow = panelEl.querySelector(".checkbox-row");
+    if (arrowsRow) panelEl.insertBefore(om, arrowsRow);
+    else panelEl.appendChild(om);
   }
 
   let _analysisDispose = null;
@@ -525,6 +636,15 @@
 
       const actions = document.createElement("div");
       actions.className = "actions";
+
+      const tryBtn = document.createElement("button");
+      tryBtn.className = "btn";
+      tryBtn.textContent = "Try playing the moves";
+      tryBtn.addEventListener("click", tryPlayingMovesAfterIdentify);
+      actions.appendChild(tryBtn);
+
+      appendPreviousButton(actions);
+
       const next = document.createElement("button");
       next.className = "btn primary";
       next.textContent = "Next →";
@@ -534,6 +654,9 @@
     } else {
       const actions = document.createElement("div");
       actions.className = "actions";
+
+      appendPreviousButton(actions);
+
       const skip = document.createElement("button");
       skip.className = "btn";
       skip.textContent = "Skip";
@@ -546,6 +669,16 @@
       actions.appendChild(skip);
       panelEl.appendChild(actions);
     }
+  }
+
+  function appendPreviousButton(actionsEl) {
+    if (historyIndex <= 0) return;
+    const prev = document.createElement("button");
+    prev.className = "btn";
+    prev.textContent = "← Previous";
+    prev.title = "Re-show the previous question (won't affect SRS)";
+    prev.addEventListener("click", previousPracticeQuestion);
+    actionsEl.appendChild(prev);
   }
 
   function renderSetupPanel() {
@@ -604,6 +737,8 @@
       sol.addEventListener("click", setupShowSolution);
       actions.appendChild(sol);
     }
+
+    appendPreviousButton(actions);
 
     const next = document.createElement("button");
     next.className = "btn primary";
@@ -714,6 +849,18 @@
     sub.className = "subtitle";
     sub.textContent = "Make moves freely on the board. Stockfish analyzes the position in real time. Arrow keys ←→ step, ↑↓ jump.";
     panelEl.appendChild(sub);
+
+    // Opening detection: name the position if its move sequence matches a known opening.
+    const matched = findMatchingOpening();
+    if (matched) {
+      const om = document.createElement("div");
+      om.className = "opening-meta";
+      om.innerHTML = `
+        <div class="name"><span class="eco">${matched.eco}</span>${escapeHtml(matched.name)}</div>
+        <div class="desc">${escapeHtml(matched.description)}</div>
+      `;
+      panelEl.appendChild(om);
+    }
 
     const arrowsRow = document.createElement("label");
     arrowsRow.className = "checkbox-row";
@@ -835,6 +982,23 @@
   }
 
   // ===== Helpers =====
+  // Find the longest known opening whose moves match a prefix of the played
+  // game. Returns the opening object, or null if no match.
+  function findMatchingOpening() {
+    const played = game.history();
+    if (played.length === 0) return null;
+    let best = null;
+    for (const op of OPENINGS) {
+      if (op.moves.length > played.length) continue;
+      let ok = true;
+      for (let i = 0; i < op.moves.length; i++) {
+        if (!sansEqual(op.moves[i], played[i])) { ok = false; break; }
+      }
+      if (ok && (!best || op.moves.length > best.moves.length)) best = op;
+    }
+    return best;
+  }
+
   function formatNumberedSan(moves) {
     let s = "";
     for (let i = 0; i < moves.length; i += 2) {
