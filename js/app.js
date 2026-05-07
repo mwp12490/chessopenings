@@ -630,7 +630,7 @@
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
-    sub.textContent = "Browse the database. Click an opening to view its position and step through moves.";
+    sub.textContent = "Browse the database. Click an opening to view its position and step through moves. Arrow keys: ←→ step, ↑↓ jump.";
     panelEl.appendChild(sub);
 
     const search = document.createElement("input");
