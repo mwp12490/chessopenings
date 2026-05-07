@@ -57,8 +57,20 @@
       updateTurnIndicator();
       renderPanel();
       if (currentMode === "analysis") triggerAnalysis();
+    } else if (currentMode === "practice" && modeState.questionType === "setup") {
+      // Replay the opening from the start position. We deliberately keep
+      // modeState.counted/mistakes intact: if the user already finished the
+      // card (e.g. via "Show solution"), the SRS grade is locked in and
+      // re-running shouldn't promote it. Mistakes from a partial attempt also
+      // persist so a reset doesn't launder away a wrong move.
+      game.reset();
+      board.setPosition(game.board(), null);
+      modeState.moveIndex = 0;
+      modeState.complete = false;
+      updateTurnIndicator();
+      renderPanel();
     } else {
-      // In quiz modes, "Reset" restarts the current question
+      // Identify mode and other quiz states — just re-render.
       renderPanel();
     }
   });
