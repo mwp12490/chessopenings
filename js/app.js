@@ -370,8 +370,10 @@
 
   // ===== Engine Analysis Mode =====
   function startAnalysis() {
-    game.reset();
-    modeState = { lastMove: null, eval: null, info: null };
+    // Don't reset the game — coming in from Practice should let the user
+    // analyze the position they just played. Use the FEN/Reset controls if
+    // they want to start over.
+    modeState = { lastMove: null, eval: null, info: null, redoStack: [] };
     board.setOrientation("white");
     board.setPosition(game.board(), null);
     updateTurnIndicator();
@@ -382,11 +384,55 @@
   function handleAnalysisMoveAttempt({ from, to }) {
     const m = game.move({ from, to, promotion: "q" });
     if (!m) return false;
+    // A new move from a viewed-past position branches off — drop forward history.
+    if (modeState.redoStack) modeState.redoStack = [];
     modeState.lastMove = { from: m.from, to: m.to };
     board.setPosition(game.board(), modeState.lastMove);
     updateTurnIndicator();
     triggerAnalysis();
     return true;
+  }
+
+  // ===== Analysis history navigation =====
+  function analysisStepBack() {
+    const m = game.undo();
+    if (!m) return;
+    modeState.redoStack.push(m);
+    const top = game.history({ verbose: true }).slice(-1)[0];
+    modeState.lastMove = top ? { from: top.from, to: top.to } : null;
+    board.setPosition(game.board(), modeState.lastMove);
+    updateTurnIndicator();
+    triggerAnalysis();
+  }
+
+  function analysisStepForward() {
+    const m = modeState.redoStack && modeState.redoStack.pop();
+    if (!m) return;
+    game.move({ from: m.from, to: m.to, promotion: m.promotion });
+    modeState.lastMove = { from: m.from, to: m.to };
+    board.setPosition(game.board(), modeState.lastMove);
+    updateTurnIndicator();
+    triggerAnalysis();
+  }
+
+  function analysisJumpToStart() {
+    let m;
+    while ((m = game.undo())) modeState.redoStack.push(m);
+    modeState.lastMove = null;
+    board.setPosition(game.board(), null);
+    updateTurnIndicator();
+    triggerAnalysis();
+  }
+
+  function analysisJumpToEnd() {
+    while (modeState.redoStack && modeState.redoStack.length) {
+      const m = modeState.redoStack.pop();
+      game.move({ from: m.from, to: m.to, promotion: m.promotion });
+      modeState.lastMove = { from: m.from, to: m.to };
+    }
+    board.setPosition(game.board(), modeState.lastMove);
+    updateTurnIndicator();
+    triggerAnalysis();
   }
 
   let _analysisDispose = null;
@@ -838,6 +884,26 @@
     const normalize = (s) => s.replace(/[+#?!]/g, "");
     return normalize(a) === normalize(b);
   }
+
+  // ===== Keyboard navigation =====
+  // Arrow keys step through history in Analysis and Explore.
+  document.addEventListener("keydown", (e) => {
+    const tag = e.target && e.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (currentMode === "analysis") {
+      if (e.key === "ArrowLeft") { e.preventDefault(); analysisStepBack(); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); analysisStepForward(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); analysisJumpToStart(); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); analysisJumpToEnd(); }
+    } else if (currentMode === "explore") {
+      if (e.key === "ArrowLeft") { e.preventDefault(); exploreStep(-1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); exploreStep(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); exploreStep(-Infinity); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); exploreStep(Infinity); }
+    }
+  });
 
   // Kick off
   setMode("practice");
