@@ -12,7 +12,9 @@
   const engineStatusEl = document.getElementById("engine-status");
 
   const SCORE_KEY = "chess-openings-trainer.score";
+  const SHOW_ARROWS_KEY = "chess-openings-trainer.show-arrows";
   let score = loadScore();
+  let showArrows = loadShowArrows();
   renderScore();
 
   validateOpenings();
@@ -698,8 +700,19 @@
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
-    sub.textContent = "Make moves freely on the board. Stockfish analyzes the position in real time.";
+    sub.textContent = "Make moves freely on the board. Stockfish analyzes the position in real time. Arrow keys ←→ step, ↑↓ jump.";
     panelEl.appendChild(sub);
+
+    const arrowsRow = document.createElement("label");
+    arrowsRow.className = "checkbox-row";
+    arrowsRow.innerHTML = `<input type="checkbox" id="show-arrows-toggle" ${showArrows ? "checked" : ""}/> Show engine arrow on board`;
+    panelEl.appendChild(arrowsRow);
+    arrowsRow.querySelector("#show-arrows-toggle").addEventListener("change", (e) => {
+      showArrows = !!e.target.checked;
+      saveShowArrows();
+      if (!showArrows) board.clearEngineArrow();
+      renderEval();
+    });
 
     const slot = document.createElement("div");
     slot.className = "eval-slot";
@@ -792,6 +805,13 @@
       if (sanLine.length) pvDisplay = sanLine.join(" ");
     }
 
+    // Engine arrow: first move of the principal variation.
+    if (showArrows && info.pv && info.pv[0] && info.pv[0].length >= 4) {
+      board.setEngineArrow(info.pv[0].slice(0, 2), info.pv[0].slice(2, 4));
+    } else {
+      board.clearEngineArrow();
+    }
+
     slot.innerHTML = `
       <div class="eval-bar"><div class="white" style="width:${pct.toFixed(1)}%"></div><div class="black"></div></div>
       <div class="eval-readout">
@@ -848,6 +868,18 @@
 
   function saveScore() {
     try { localStorage.setItem(SCORE_KEY, JSON.stringify(score)); } catch (e) {}
+  }
+
+  function loadShowArrows() {
+    try {
+      const raw = localStorage.getItem(SHOW_ARROWS_KEY);
+      if (raw == null) return true; // default on
+      return raw === "true";
+    } catch (e) { return true; }
+  }
+
+  function saveShowArrows() {
+    try { localStorage.setItem(SHOW_ARROWS_KEY, String(showArrows)); } catch (e) {}
   }
 
   function shuffle(arr) {

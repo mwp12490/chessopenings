@@ -68,6 +68,74 @@ class ChessBoard {
         this.squares[square] = sq;
       }
     }
+
+    // Arrow overlay (engine recommendations etc). Sits above the squares,
+    // ignores pointer events so clicks/drag pass through to the board.
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", "0 0 8 8");
+    svg.setAttribute("class", "board-arrows");
+    svg.setAttribute("preserveAspectRatio", "none");
+    this.root.appendChild(svg);
+    this._arrowSvg = svg;
+  }
+
+  _squareToXY(square) {
+    const fileIdx = FILES.indexOf(square[0]);
+    const rankIdx = RANKS.indexOf(square[1]);
+    if (fileIdx < 0 || rankIdx < 0) return null;
+    const f = this.orientation === "white" ? fileIdx : 7 - fileIdx;
+    const r = this.orientation === "white" ? rankIdx : 7 - rankIdx;
+    return { x: f + 0.5, y: r + 0.5 };
+  }
+
+  // Draw a single arrow from `from` square to `to` square. Replaces any
+  // existing arrow. Pass null to clear.
+  setEngineArrow(from, to) {
+    const svg = this._arrowSvg;
+    if (!svg) return;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    if (!from || !to) return;
+    const a = this._squareToXY(from);
+    const b = this._squareToXY(to);
+    if (!a || !b) return;
+
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.001) return;
+    const ux = dx / len, uy = dy / len;
+
+    // Pull the shaft back from the target so it tucks under the head.
+    const headLen = 0.36;
+    const headHalfWidth = 0.22;
+    const sx = a.x + ux * 0.18, sy = a.y + uy * 0.18; // start a bit out of source center
+    const tx = b.x - ux * headLen * 0.55;             // shaft end inside head
+    const ty = b.y - uy * headLen * 0.55;
+    const headBaseX = b.x - ux * headLen;
+    const headBaseY = b.y - uy * headLen;
+    const px = -uy, py = ux;
+    const t1x = headBaseX + px * headHalfWidth;
+    const t1y = headBaseY + py * headHalfWidth;
+    const t2x = headBaseX - px * headHalfWidth;
+    const t2y = headBaseY - py * headHalfWidth;
+
+    const ns = "http://www.w3.org/2000/svg";
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("x1", sx);
+    line.setAttribute("y1", sy);
+    line.setAttribute("x2", tx);
+    line.setAttribute("y2", ty);
+    line.setAttribute("class", "engine-arrow-line");
+    svg.appendChild(line);
+
+    const head = document.createElementNS(ns, "polygon");
+    head.setAttribute("points", b.x + "," + b.y + " " + t1x + "," + t1y + " " + t2x + "," + t2y);
+    head.setAttribute("class", "engine-arrow-head");
+    svg.appendChild(head);
+  }
+
+  clearEngineArrow() {
+    this.setEngineArrow(null, null);
   }
 
   _bindGlobalListeners() {
@@ -92,6 +160,7 @@ class ChessBoard {
     this.boardState = boardState;
     this.lastMove = lastMove || null;
     this.selected = null;
+    this.clearEngineArrow();
     this._render();
   }
 

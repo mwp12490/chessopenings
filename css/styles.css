@@ -779,3 +779,37 @@ body {
   padding: 0 4px;
 }
 .update-banner button:hover { opacity: 0.7; }
+
+/* ===== Engine arrow overlay ===== */
+.board-arrows {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+}
+.engine-arrow-line {
+  stroke: var(--accent);
+  stroke-width: 0.18;
+  stroke-linecap: round;
+  opacity: 0.78;
+}
+.engine-arrow-head {
+  fill: var(--accent);
+  opacity: 0.78;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.checkbox-row input[type="checkbox"] {
+  accent-color: var(--accent);
+}
