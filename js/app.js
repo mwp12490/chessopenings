@@ -812,11 +812,29 @@
   // ===== Move handling dispatcher =====
   function handleMoveAttempt(move) {
     if (currentMode === "practice") {
+      // Once the question is revealed (Identify answered / Setup complete /
+      // Play complete / Mystery identified), the user can freely play moves
+      // past the book line. The engine eval/arrow follow along (auto-on
+      // post-reveal), so this doubles as inline analysis.
+      if (isQuestionRevealed()) return handleFreeMoveAttempt(move);
       if (modeState.questionType === "setup") return handleSetupMoveAttempt(move);
       if (modeState.questionType === "play" || modeState.questionType === "playmystery") return handlePlayMoveAttempt(move);
     }
     if (currentMode === "explore") return handleExploreMoveAttempt(move);
     return false;
+  }
+
+  // Post-completion free play: any legal move is accepted so the user can
+  // explore continuations from the resulting position. Triggers engine
+  // analysis immediately (eval section is already auto-rendered post-reveal).
+  function handleFreeMoveAttempt({ from, to }) {
+    const m = game.move({ from, to, promotion: "q" });
+    if (!m) return false;
+    modeState.lastMove = { from: m.from, to: m.to };
+    board.setPosition(game.board(), modeState.lastMove);
+    updateTurnIndicator();
+    triggerAnalysis();
+    return true;
   }
 
   // ===== UI rendering =====
