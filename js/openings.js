@@ -655,11 +655,19 @@ const OPENINGS = [
   }
 ];
 
-// Build random distractor list helpers
-function getRandomOpenings(n, exclude) {
-  const pool = OPENINGS.filter(o => !exclude || o.name !== exclude.name);
-  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, n);
+// Build random distractor list helpers. `customPool`, when provided, is the
+// preferred source — if it's smaller than `n`, we fall back to OPENINGS to
+// fill out the remaining slots so the quiz still has enough choices.
+function getRandomOpenings(n, exclude, customPool) {
+  const primary = (customPool || OPENINGS).filter(o => !exclude || o.name !== exclude.name);
+  if (primary.length >= n) {
+    return primary.slice().sort(() => Math.random() - 0.5).slice(0, n);
+  }
+  const usedNames = new Set(primary.map(o => o.name));
+  if (exclude) usedNames.add(exclude.name);
+  const fillers = OPENINGS.filter(o => !usedNames.has(o.name));
+  const filled = primary.concat(fillers.slice().sort(() => Math.random() - 0.5).slice(0, n - primary.length));
+  return filled.slice().sort(() => Math.random() - 0.5);
 }
 
 function findOpeningByName(name) {

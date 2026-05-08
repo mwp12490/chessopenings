@@ -191,7 +191,7 @@
     board.setPosition(game.board(), null);
     updateTurnIndicator();
 
-    const distractors = getRandomOpenings(5, opening);
+    const distractors = getRandomOpenings(5, opening, getFilteredOpeningPool());
     const choices = shuffle([opening, ...distractors]);
 
     modeState = {
@@ -445,13 +445,19 @@
     if (!move) return false;
 
     if (modeState.isMystery) {
-      // Open-ended: any move that's a prefix of some opening in the database.
+      // Open-ended: any move that's a prefix of some opening in the
+      // database — but constrained to openings in the user's enabled
+      // tiers so Mystery only ever lands on tiers they're studying.
       const playedSans = game.history();
       const newSeq = [...playedSans, move.san];
-      const candidates = findCandidateOpenings(newSeq);
+      const allCandidates = findCandidateOpenings(newSeq);
+      const candidates = allCandidates.filter(op => tierFilter.has(op.tier || "C"));
       if (candidates.length === 0) {
-        flashFeedback(panelEl.querySelector(".feedback-slot"),
-          "Not a standard book move from here — try a more common one.", "bad");
+        modeState.mistakes++;
+        const msg = allCandidates.length === 0
+          ? "Not a standard book move from here — try something more common."
+          : "That move only leads into tiers you've turned off — try a different one.";
+        flashFeedback(panelEl.querySelector(".feedback-slot"), msg, "bad");
         return false;
       }
       const real = game.move({ from, to, promotion: "q" });
@@ -460,9 +466,9 @@
       board.setPosition(game.board(), { from: real.from, to: real.to });
       updateTurnIndicator();
       // If the user just deviated from the app's target line, pivot the
-      // target so the app's next reply leads them somewhere coherent.
+      // target to one of the still-enabled candidates.
       const target = modeState.mysteryTarget;
-      if (!target || !isPrefixOf(newSeq, target.moves)) {
+      if (!target || !isPrefixOf(newSeq, target.moves) || !tierFilter.has(target.tier || "C")) {
         const continuing = candidates.filter(op => op.moves.length > newSeq.length);
         modeState.mysteryTarget = pickWeightedRandomOpening(
           continuing.length ? continuing : candidates
@@ -508,9 +514,16 @@
       const playedSans = game.history();
       const target = modeState.mysteryTarget;
       // If we're not on a continuing target (e.g. the very first auto-move
-      // when user is Black), pick one fresh.
-      if (!target || !isPrefixOf(playedSans, target.moves) || playedSans.length >= target.moves.length) {
-        const candidates = findCandidateOpenings(playedSans).filter(op => op.moves.length > playedSans.length);
+      // when user is Black), or the current target is in a now-excluded
+      // tier, pick a fresh one from the user's enabled tiers.
+      const targetOk = target
+        && isPrefixOf(playedSans, target.moves)
+        && playedSans.length < target.moves.length
+        && tierFilter.has(target.tier || "C");
+      if (!targetOk) {
+        const candidates = findCandidateOpenings(playedSans)
+          .filter(op => op.moves.length > playedSans.length)
+          .filter(op => tierFilter.has(op.tier || "C"));
         if (candidates.length === 0) {
           finishMysteryPlay();
           return;
@@ -1234,7 +1247,7 @@
 
     // Mystery: identification choices once the line ends.
     if (isMystery && complete && !nameAnswered && matchedOpening) {
-      const distractors = getRandomOpenings(5, matchedOpening);
+      const distractors = getRandomOpenings(5, matchedOpening, getFilteredOpeningPool());
       const choices = shuffle([matchedOpening, ...distractors]);
       const choicesDiv = document.createElement("div");
       choicesDiv.className = "choices";
