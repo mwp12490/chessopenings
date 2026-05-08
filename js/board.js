@@ -143,6 +143,14 @@ class ChessBoard {
     document.addEventListener("mouseup", (e) => this._onMouseUp(e));
     document.addEventListener("touchmove", (e) => this._onTouchMove(e), { passive: false });
     document.addEventListener("touchend", (e) => this._onTouchEnd(e));
+    // Cancel a drag on right-click anywhere, and suppress the system menu so
+    // it doesn't pop up over the board.
+    document.addEventListener("contextmenu", (e) => {
+      if (this._isDragging || (this.root && this.root.contains(e.target))) {
+        e.preventDefault();
+      }
+      if (this._isDragging) this._cancelDrag();
+    });
   }
 
   setOrientation(o) {
@@ -255,7 +263,15 @@ class ChessBoard {
 
   _onMouseDown(e, square) {
     if (!this.draggable) return;
-    if (e.button !== 0) return;
+    // Right- or middle-click while dragging cancels the drag (piece returns
+    // to its source square instead of dropping at the cursor).
+    if (e.button !== 0) {
+      if (this._isDragging) {
+        e.preventDefault();
+        this._cancelDrag();
+      }
+      return;
+    }
     const piece = this._pieceAt(square);
     if (!piece) return;
     e.preventDefault();
@@ -310,6 +326,9 @@ class ChessBoard {
 
   _onMouseUp(e) {
     if (!this._isDragging) return;
+    // Only the left button release should commit the drop; right/middle
+    // releases are ignored (they shouldn't produce a move).
+    if (e.button !== 0) return;
     this._endDrag(e.clientX, e.clientY);
   }
 
@@ -335,6 +354,20 @@ class ChessBoard {
       const accepted = this.onMoveAttempt({ from, to: target.dataset.square });
       if (!accepted) this._render();
     }
+  }
+
+  // Aborts an in-progress drag without attempting a move. Piece visually
+  // returns to where it started.
+  _cancelDrag() {
+    this._isDragging = false;
+    if (this._dragGhost) { this._dragGhost.remove(); this._dragGhost = null; }
+    const from = this._dragFrom;
+    this._dragFrom = null;
+    const piece = this.squares[from] && this.squares[from].querySelector(".piece");
+    if (piece) piece.classList.remove("dragging");
+    this._clearLegal();
+    this.selected = null;
+    this._render();
   }
 
   showHint(square) {
