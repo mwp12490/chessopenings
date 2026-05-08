@@ -1064,3 +1064,36 @@ body {
     flex-direction: column;
   }
 }
+
+.engine-section {
+  margin-top: 18px;
+}
+
+.engine-toggle {
+  display: block;
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  letter-spacing: 0.02em;
+  transition: all 0.15s;
+}
+.engine-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.engine-toggle.active {
+  background: var(--accent);
+  color: #1a1a1a;
+  border-color: var(--accent);
+}
+.engine-toggle.active:hover {
+  filter: brightness(1.05);
+  color: #1a1a1a;
+}

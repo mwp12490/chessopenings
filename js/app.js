@@ -715,22 +715,24 @@
     if (currentMode === "explore") return renderExplorePanel();
   }
 
-  // Renders the optional "Show engine analysis" toggle plus, when on, an
-  // eval-slot div for triggerAnalysis to populate. Appended at the bottom
-  // of the Practice panel content (before stats).
+  // Renders the "Engine analysis" toggle plus, when on, an eval-slot div
+  // for triggerAnalysis to populate. Appended at the bottom of the Practice
+  // panel content (before stats).
   function appendEngineAnalysisSection() {
     const wrap = document.createElement("div");
     wrap.className = "engine-section";
 
-    const row = document.createElement("label");
-    row.className = "checkbox-row";
-    row.innerHTML = `<input type="checkbox" id="show-engine-toggle" ${showEngine ? "checked" : ""}/> Show engine analysis (eval bar + best move arrow)`;
-    wrap.appendChild(row);
-    row.querySelector("#show-engine-toggle").addEventListener("change", (e) => {
-      showEngine = !!e.target.checked;
+    const btn = document.createElement("button");
+    btn.className = "engine-toggle" + (showEngine ? " active" : "");
+    btn.textContent = showEngine
+      ? "Engine analysis: ON — click to hide"
+      : "Show engine analysis (eval bar + best move arrow)";
+    btn.addEventListener("click", () => {
+      showEngine = !showEngine;
       saveShowEngine();
       renderPanel();
     });
+    wrap.appendChild(btn);
 
     if (showEngine) {
       const slot = document.createElement("div");
