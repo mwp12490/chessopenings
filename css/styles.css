@@ -329,6 +329,10 @@ body {
   border-radius: 8px;
   padding: 18px;
   min-height: 400px;
+  /* Lift the panel into its own stacking context above the board so tooltips
+     that overflow the panel's left edge don't get painted over by pieces. */
+  position: relative;
+  z-index: 5;
 }
 
 .panel h2 {
@@ -961,7 +965,7 @@ body {
   white-space: pre-line;
   width: max-content;
   max-width: 260px;
-  z-index: 100;
+  z-index: 9999;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
   pointer-events: none;
   line-height: 1.45;
@@ -975,7 +979,7 @@ body {
   border: 6px solid transparent;
   border-top-color: var(--border);
   pointer-events: none;
-  z-index: 101;
+  z-index: 9999;
 }
 
 .key-row {
