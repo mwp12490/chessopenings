@@ -1207,3 +1207,21 @@ body {
   filter: brightness(1.05);
   color: #1a1a1a;
 }
+
+.tier-filter-bulk {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-left: 4px;
+}
+.tier-filter-bulk:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

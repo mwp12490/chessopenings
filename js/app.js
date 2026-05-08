@@ -977,6 +977,28 @@
       });
       wrap.appendChild(btn);
     }
+    // Bulk-toggle helpers — All enables every tier; None resets to just S
+    // (we keep at least one so the rotation never starves).
+    const all = document.createElement("button");
+    all.className = "tier-filter-bulk";
+    all.textContent = "All";
+    all.title = "Enable every tier";
+    all.addEventListener("click", () => {
+      tierFilter = new Set(["S", "A", "B", "C", "D", "F"]);
+      saveTierFilter();
+      renderPanel();
+    });
+    wrap.appendChild(all);
+    const none = document.createElement("button");
+    none.className = "tier-filter-bulk";
+    none.textContent = "None";
+    none.title = "Disable all tiers (keeps S so the rotation has something to study)";
+    none.addEventListener("click", () => {
+      tierFilter = new Set(["S"]);
+      saveTierFilter();
+      renderPanel();
+    });
+    wrap.appendChild(none);
     return wrap;
   }
 
@@ -1019,12 +1041,33 @@
     const fc = SRS.forecast(OPENINGS);
     const hardest = SRS.hardest(OPENINGS, 5);
     const eco = SRS.byEco(OPENINGS);
+    const tier = SRS.byTier(OPENINGS);
     panelEl.appendChild(renderDeckSummary(deck));
     panelEl.appendChild(renderForecast(fc));
+    panelEl.appendChild(renderTierBreakdown(tier));
     panelEl.appendChild(renderEcoBreakdown(eco));
     panelEl.appendChild(renderHardest(hardest));
     panelEl.appendChild(renderPillKey());
     panelEl.appendChild(renderEcoKey());
+  }
+
+  function renderTierBreakdown(tier) {
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    let rows = "";
+    for (const t of ["S", "A", "B", "C", "D", "F"]) {
+      const g = tier[t];
+      if (!g || g.total === 0) continue;
+      const pct = Math.round((g.known / g.total) * 100);
+      rows += `
+        <div class="eco-row">
+          <div class="eco-name"><span class="tier-pill tier-${t}">${t}</span></div>
+          <div class="eco-bar"><div style="width:${pct}%"></div></div>
+          <div class="eco-count">${g.known}/${g.total}</div>
+        </div>`;
+    }
+    wrap.innerHTML = `<div class="stats-h3">By tier</div>${rows}`;
+    return wrap;
   }
 
   function renderIdentifyPanel(isAfterAnswer) {

@@ -112,6 +112,20 @@
       .slice(0, n || 5);
   }
 
+  // Mastery breakdown by tier letter (S/A/B/C/D/F).
+  function byTier(pool) {
+    const groups = {};
+    for (const t of ["S", "A", "B", "C", "D", "F"]) groups[t] = { known: 0, total: 0 };
+    for (const o of pool) {
+      const t = o.tier || "C";
+      if (!groups[t]) continue;
+      groups[t].total++;
+      const c = state[o.name];
+      if (c && c.reps >= 1) groups[t].known++;
+    }
+    return groups;
+  }
+
   // Mastery breakdown by ECO family letter (A–E).
   // "known" = card exists and has at least one successful rep.
   function byEco(pool) {
@@ -145,6 +159,6 @@
     return { today, tomorrow, week };
   }
 
-  window.SRS = { pickNext, review, deckStats, hardest, byEco, forecast,
+  window.SRS = { pickNext, review, deckStats, hardest, byEco, byTier, forecast,
     getCard: (name) => state[name] || null };
 })();
