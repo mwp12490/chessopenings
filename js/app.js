@@ -889,6 +889,9 @@
       }
     }
     if (!m) return false;
+    // A new move from a stepped-back position branches off — drop forward
+    // history so → doesn't replay a stale line.
+    if (modeState.practiceRedoStack) modeState.practiceRedoStack = [];
     modeState.lastMove = { from: m.from, to: m.to };
     board.setPosition(game.board(), modeState.lastMove);
     updateTurnIndicator();
@@ -1786,8 +1789,61 @@
       else if (e.key === "ArrowRight") { e.preventDefault(); exploreStep(1); }
       else if (e.key === "ArrowUp") { e.preventDefault(); exploreStep(-Infinity); }
       else if (e.key === "ArrowDown") { e.preventDefault(); exploreStep(Infinity); }
+    } else if (currentMode === "practice" && isQuestionRevealed()) {
+      if (e.key === "ArrowLeft") { e.preventDefault(); practiceStepBack(); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); practiceStepForward(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); practiceJumpToStart(); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); practiceJumpToEnd(); }
     }
   });
+
+  // ===== Post-reveal history navigation in Practice =====
+  // Mirrors the analysis-style nav we used to have on the Analysis tab.
+  // Tracks undone moves on modeState.practiceRedoStack so → can replay.
+  function practiceStepBack() {
+    const m = game.undo();
+    if (!m) return;
+    modeState.practiceRedoStack = modeState.practiceRedoStack || [];
+    modeState.practiceRedoStack.push(m);
+    const top = game.history({ verbose: true }).slice(-1)[0];
+    modeState.lastMove = top ? { from: top.from, to: top.to } : null;
+    board.setPosition(game.board(), modeState.lastMove);
+    updateTurnIndicator();
+    triggerAnalysis();
+  }
+
+  function practiceStepForward() {
+    const stack = modeState.practiceRedoStack;
+    const m = stack && stack.pop();
+    if (!m) return;
+    game.move({ from: m.from, to: m.to, promotion: m.promotion });
+    modeState.lastMove = { from: m.from, to: m.to };
+    board.setPosition(game.board(), modeState.lastMove);
+    updateTurnIndicator();
+    triggerAnalysis();
+  }
+
+  function practiceJumpToStart() {
+    modeState.practiceRedoStack = modeState.practiceRedoStack || [];
+    let m;
+    while ((m = game.undo())) modeState.practiceRedoStack.push(m);
+    modeState.lastMove = null;
+    board.setPosition(game.board(), null);
+    updateTurnIndicator();
+    triggerAnalysis();
+  }
+
+  function practiceJumpToEnd() {
+    modeState.practiceRedoStack = modeState.practiceRedoStack || [];
+    while (modeState.practiceRedoStack.length) {
+      const m = modeState.practiceRedoStack.pop();
+      game.move({ from: m.from, to: m.to, promotion: m.promotion });
+      modeState.lastMove = { from: m.from, to: m.to };
+    }
+    board.setPosition(game.board(), modeState.lastMove);
+    updateTurnIndicator();
+    triggerAnalysis();
+  }
 
   // Kick off
   setMode("practice");
