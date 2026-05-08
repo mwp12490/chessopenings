@@ -701,6 +701,8 @@
       <div class="key-row"><span class="popularity-pill">★★★☆</span> ${escapeHtml(POPULARITY_DESCS[3])}</div>
       <div class="key-row"><span class="popularity-pill">★★☆☆</span> ${escapeHtml(POPULARITY_DESCS[2])}</div>
       <div class="key-row"><span class="popularity-pill">★☆☆☆</span> ${escapeHtml(POPULARITY_DESCS[1])}</div>
+      <div class="key-row"><span class="audience-tag aud-beginner">Beginner</span> Beginner-friendly — clear plans, low risk of immediate disaster, easy to learn the typical structures.</div>
+      <div class="key-row"><span class="audience-tag aud-gm">GM</span> Played at the top level — regularly appears in modern grandmaster practice.</div>
       <div class="key-row"><span class="eval-pill eval-equal">+0.20</span> Stockfish's evaluation at depth 14 of the position after the opening's main line. Positive favors White; negative favors Black; ≈0 means the position is balanced.</div>
     `;
     return wrap;
@@ -1489,11 +1491,19 @@
     const evalSlot = opts.includeEval
       ? `<span class="eval-pill" data-eval-pill data-tip="Stockfish evaluation of the resulting position at depth 14.\nPositive favors White, negative favors Black.">eval …</span>`
       : "";
+    const begTag = opening.beginnerFriendly
+      ? `<span class="audience-tag aud-beginner" data-tip="Beginner-friendly — clear plans, low risk of immediate disaster, easy to learn the typical structures.">Beginner</span>`
+      : "";
+    const gmTag = opening.gmFriendly
+      ? `<span class="audience-tag aud-gm" data-tip="Played at the top level — regularly appears in modern grandmaster practice.">GM</span>`
+      : "";
     return `
       <div class="opening-pills">
         <span class="side-tag side-${side.toLowerCase()}" data-tip="${escapeHtml(side)}'s opening — the main line ends on ${escapeHtml(side)}'s move.">${side}</span>
         <span class="tier-pill tier-${tier}" data-tip="${escapeHtml(tierInfo.label)} — ${escapeHtml(tierInfo.desc)}">${escapeHtml(tierInfo.label)}</span>
         <span class="popularity-pill" data-tip="${escapeHtml(popDesc)}">${stars}</span>
+        ${begTag}
+        ${gmTag}
         ${evalSlot}
       </div>
     `;

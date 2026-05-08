@@ -951,8 +951,11 @@ body {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  /* Anchor to the trigger's left so the tooltip extends rightward into the
+     panel — the panel's overflow-y: auto silently clips horizontally too,
+     so a centered tooltip that overflowed leftward got hidden by the
+     board side. */
+  left: 0;
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
@@ -974,8 +977,7 @@ body {
   content: "";
   position: absolute;
   bottom: calc(100% + 2px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: 14px;
   border: 6px solid transparent;
   border-top-color: var(--border);
   pointer-events: none;
@@ -1152,3 +1154,22 @@ body {
 
 /* The horizontal eval-bar inside the panel slot is gone — keep the slot's
    readout + bestline rules intact. */
+
+.audience-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  letter-spacing: 0.02em;
+}
+.audience-tag.aud-beginner {
+  background: rgba(76, 175, 80, 0.20);
+  color: #7fce85;
+  border-color: #3d7a40;
+}
+.audience-tag.aud-gm {
+  background: rgba(90, 169, 230, 0.18);
+  color: #7ab8e3;
+  border-color: #3a6b94;
+}

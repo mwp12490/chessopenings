@@ -732,3 +732,40 @@ const POPULARITY_DESCS = {
   3: "Common — regularly seen at the top level.",
   4: "Very common — a top-frequency choice in master practice."
 };
+
+// "Audience" tags — patched onto each opening so renderers can show small
+// flags. Beginner-friendly = clear plans, low risk of immediate disaster,
+// easy to learn. GM-friendly = regularly appears in modern top-level games.
+// The two are independent: an opening can be both, neither, or one.
+const BEGINNER_FRIENDLY_OPENINGS = new Set([
+  "Italian Game", "Giuoco Piano", "Two Knights Defense", "Scotch Game",
+  "Four Knights Game", "Vienna Game", "Bishop's Opening", "Petrov's Defense",
+  "Sicilian Alapin", "Sicilian Closed",
+  "French Defense", "French Advance", "French Tarrasch", "French Exchange",
+  "Caro-Kann Defense", "Caro-Kann Classical", "Caro-Kann Advance",
+  "Scandinavian Defense",
+  "Queen's Gambit", "Queen's Gambit Accepted", "Queen's Gambit Declined",
+  "Slav Defense", "London System", "Torre Attack", "Colle System",
+  "King's Indian Attack"
+]);
+
+const GM_FRIENDLY_OPENINGS = new Set([
+  "Italian Game", "Giuoco Piano", "Two Knights Defense",
+  "Ruy Lopez", "Berlin Defense", "Scotch Game", "Petrov's Defense",
+  "Sicilian Defense", "Sicilian Najdorf", "Sicilian Dragon",
+  "Sicilian Sveshnikov", "Sicilian Scheveningen", "Sicilian Taimanov",
+  "Sicilian Alapin",
+  "French Defense", "French Winawer", "French Tarrasch",
+  "Caro-Kann Defense", "Caro-Kann Classical", "Caro-Kann Advance",
+  "Queen's Gambit", "Queen's Gambit Accepted", "Queen's Gambit Declined",
+  "Slav Defense", "Semi-Slav Defense",
+  "King's Indian Defense", "Grünfeld Defense", "Nimzo-Indian Defense",
+  "Queen's Indian Defense", "Catalan Opening",
+  "London System", "Trompowsky Attack",
+  "English Opening", "Réti Opening"
+]);
+
+for (const op of OPENINGS) {
+  op.beginnerFriendly = BEGINNER_FRIENDLY_OPENINGS.has(op.name);
+  op.gmFriendly = GM_FRIENDLY_OPENINGS.has(op.name);
+}
