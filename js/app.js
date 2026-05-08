@@ -11,9 +11,10 @@
   const engineDot = document.getElementById("engine-dot");
   const engineStatusEl = document.getElementById("engine-status");
 
-  const SCORE_KEY = "chess-openings-trainer.score";
+  const SCORE_GOAL_PCT = 80;
   const SHOW_ARROWS_KEY = "chess-openings-trainer.show-arrows";
-  let score = loadScore();
+  // Score is per-session — not persisted across launches.
+  let score = { correct: 0, total: 0 };
   let showArrows = loadShowArrows();
   renderScore();
 
@@ -1031,19 +1032,22 @@
   }
 
   function renderScore() {
-    scoreEl.textContent = `${score.correct} / ${score.total}`;
+    if (score.total === 0) {
+      scoreEl.textContent = "0 / 0";
+      scoreEl.className = "";
+      return;
+    }
+    const pct = Math.round((score.correct / score.total) * 100);
+    scoreEl.textContent = `${score.correct} / ${score.total} · ${pct}%`;
+    scoreEl.className = pct >= SCORE_GOAL_PCT ? "score-met" : "score-below";
   }
 
   function loadScore() {
-    try {
-      const raw = localStorage.getItem(SCORE_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {}
     return { correct: 0, total: 0 };
   }
 
   function saveScore() {
-    try { localStorage.setItem(SCORE_KEY, JSON.stringify(score)); } catch (e) {}
+    // No-op — score is session-only by design.
   }
 
   function loadShowArrows() {
