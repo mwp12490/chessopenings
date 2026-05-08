@@ -315,13 +315,34 @@
   // user has to identify it from a 4-choice list at the end.
   function loadPlayCard(opening, isMystery, historyEntry) {
     game.reset();
-    const userSide = openingSide(opening).toLowerCase(); // "white" | "black"
+    let userSide;
+    let mysteryTarget = null;
+    if (isMystery) {
+      // Mystery is open-ended: no specific target shown to the user. Pick a
+      // random side so they practice both colors. The "target" is the
+      // opening the app aims toward — popularity-weighted random pick from
+      // the whole database. The target determines where the app stops; if
+      // the user deviates the app pivots to a new compatible target. Same
+      // 2-ply prefix can stop early (target = Sicilian Defense) or run long
+      // (target = Sicilian Najdorf), giving variety on repeat plays.
+      userSide = (historyEntry && historyEntry.userSide)
+        || (Math.random() < 0.5 ? "white" : "black");
+      if (historyEntry) historyEntry.userSide = userSide;
+      mysteryTarget = (historyEntry && historyEntry.mysteryTarget)
+        || pickWeightedRandomOpening(OPENINGS);
+      if (historyEntry) historyEntry.mysteryTarget = mysteryTarget;
+    } else {
+      userSide = openingSide(opening).toLowerCase();
+    }
     board.setOrientation(userSide);
     board.setPosition(game.board(), null);
     modeState = {
       questionType: isMystery ? "playmystery" : "play",
       isMystery,
-      opening,
+      // For Mystery, no fixed target opening shown — matchedOpening at
+      // finish time is what the user identifies.
+      opening: isMystery ? null : opening,
+      mysteryTarget, // hidden target the app aims toward (mystery only)
       userSide,
       moveIndex: 0,
       mistakes: 0,
@@ -330,6 +351,7 @@
       // opening name from choices yet. We grade SRS at that point (or, for
       // non-mystery play, when all moves complete).
       nameAnswered: !isMystery,
+      matchedOpening: null,
       counted: !!(historyEntry && historyEntry.graded),
       historyEntry: historyEntry || null
     };
@@ -341,6 +363,45 @@
     }
   }
 
+  // Returns openings whose moves array starts with the played sequence
+  // (i.e. the played sequence is a prefix of, or equal to, the opening's
+  // book line). Used by Mystery to validate book moves and pick responses.
+  function findCandidateOpenings(playedSans) {
+    return OPENINGS.filter(op => {
+      if (op.moves.length < playedSans.length) return false;
+      for (let i = 0; i < playedSans.length; i++) {
+        if (!sansEqual(op.moves[i], playedSans[i])) return false;
+      }
+      return true;
+    });
+  }
+
+  // Pick a popularity-weighted random opening from `pool`. Squared weights
+  // bias toward common openings without pushing rare ones to zero.
+  function pickWeightedRandomOpening(pool) {
+    if (!pool || pool.length === 0) return null;
+    const weights = pool.map(op => Math.pow(op.popularity || 1, 2));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < pool.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return pool[i];
+    }
+    return pool[pool.length - 1];
+  }
+
+  function isPrefixOf(short, long) {
+    if (short.length > long.length) return false;
+    for (let i = 0; i < short.length; i++) {
+      if (!sansEqual(short[i], long[i])) return false;
+    }
+    return true;
+  }
+
+  function sameSeq(a, b) {
+    return a.length === b.length && isPrefixOf(a, b);
+  }
+
   function handlePlayMoveAttempt({ from, to }) {
     if (modeState.complete) return false;
     // Only let the user move when it's their turn — during the brief delay
@@ -349,13 +410,47 @@
     const userTurn = modeState.userSide === "white" ? "w" : "b";
     if (game.turn() !== userTurn) return false;
 
-    const expectedSan = modeState.opening.moves[modeState.moveIndex];
-    if (!expectedSan) return false;
-
     const probe = new Chess(game.fen());
     const move = probe.move({ from, to, promotion: "q" });
     if (!move) return false;
 
+    if (modeState.isMystery) {
+      // Open-ended: any move that's a prefix of some opening in the database.
+      const playedSans = game.history();
+      const newSeq = [...playedSans, move.san];
+      const candidates = findCandidateOpenings(newSeq);
+      if (candidates.length === 0) {
+        flashFeedback(panelEl.querySelector(".feedback-slot"),
+          "Not a standard book move from here — try a more common one.", "bad");
+        return false;
+      }
+      const real = game.move({ from, to, promotion: "q" });
+      modeState.moveIndex++;
+      modeState.matchedOpening = findMatchingOpening();
+      board.setPosition(game.board(), { from: real.from, to: real.to });
+      updateTurnIndicator();
+      // If the user just deviated from the app's target line, pivot the
+      // target so the app's next reply leads them somewhere coherent.
+      const target = modeState.mysteryTarget;
+      if (!target || !isPrefixOf(newSeq, target.moves)) {
+        const continuing = candidates.filter(op => op.moves.length > newSeq.length);
+        modeState.mysteryTarget = pickWeightedRandomOpening(
+          continuing.length ? continuing : candidates
+        );
+      }
+      // Stop condition: the played sequence reached the target's full line.
+      if (sameSeq(newSeq, modeState.mysteryTarget.moves)) {
+        setTimeout(() => finishMysteryPlay(), 700);
+      } else {
+        setTimeout(() => playAutoMove(), 600);
+      }
+      renderPanel();
+      return true;
+    }
+
+    // Named "play" mode: user must follow the pre-picked opening's line.
+    const expectedSan = modeState.opening.moves[modeState.moveIndex];
+    if (!expectedSan) return false;
     if (move.san === expectedSan || sansEqual(move.san, expectedSan)) {
       const real = game.move({ from, to, promotion: "q" });
       modeState.moveIndex++;
@@ -364,7 +459,6 @@
       if (modeState.moveIndex >= modeState.opening.moves.length) {
         finishPlay();
       } else {
-        // Opponent reply
         setTimeout(() => playAutoMove(), 600);
       }
       renderPanel();
@@ -378,16 +472,49 @@
 
   function playAutoMove() {
     if (modeState.complete) return;
-    const expectedSan = modeState.opening.moves[modeState.moveIndex];
-    if (!expectedSan) return;
-    const m = game.move(expectedSan, { sloppy: true });
+
+    let responseSan;
+    if (modeState.isMystery) {
+      const playedSans = game.history();
+      const target = modeState.mysteryTarget;
+      // If we're not on a continuing target (e.g. the very first auto-move
+      // when user is Black), pick one fresh.
+      if (!target || !isPrefixOf(playedSans, target.moves) || playedSans.length >= target.moves.length) {
+        const candidates = findCandidateOpenings(playedSans).filter(op => op.moves.length > playedSans.length);
+        if (candidates.length === 0) {
+          finishMysteryPlay();
+          return;
+        }
+        modeState.mysteryTarget = pickWeightedRandomOpening(candidates);
+      }
+      responseSan = modeState.mysteryTarget.moves[playedSans.length];
+    } else {
+      responseSan = modeState.opening.moves[modeState.moveIndex];
+      if (!responseSan) return;
+    }
+
+    const m = game.move(responseSan, { sloppy: true });
     if (!m) return;
     modeState.moveIndex++;
+    if (modeState.isMystery) {
+      modeState.matchedOpening = findMatchingOpening();
+    }
     board.setPosition(game.board(), { from: m.from, to: m.to });
     updateTurnIndicator();
-    if (modeState.moveIndex >= modeState.opening.moves.length) {
+    if (modeState.isMystery && sameSeq(game.history(), modeState.mysteryTarget.moves)) {
+      // Target's full line played — auto-finish so the user can identify it.
+      setTimeout(() => finishMysteryPlay(), 500);
+    } else if (!modeState.isMystery && modeState.moveIndex >= modeState.opening.moves.length) {
       finishPlay();
     }
+    renderPanel();
+  }
+
+  // User clicked "Done — identify" in Mystery mode. Lock in the matched
+  // opening and surface the 4-choice identification panel.
+  function finishMysteryPlay() {
+    modeState.complete = true;
+    modeState.matchedOpening = findMatchingOpening();
     renderPanel();
   }
 
@@ -411,23 +538,29 @@
   function answerPlayMystery(choice, btnEl) {
     if (modeState.nameAnswered) return;
     modeState.nameAnswered = true;
-    const nameCorrect = choice.name === modeState.opening.name;
+    // The opening to identify is whichever one the played sequence ended on
+    // (Mystery is open-ended, so this is determined at finish time, not at
+    // card selection time).
+    const target = modeState.matchedOpening;
+    const nameCorrect = !!(target && choice.name === target.name);
     const buttons = panelEl.querySelectorAll(".choice");
     buttons.forEach(b => {
       b.disabled = true;
-      if (b.dataset.name === modeState.opening.name) b.classList.add("correct");
+      if (target && b.dataset.name === target.name) b.classList.add("correct");
       else if (b === btnEl && !nameCorrect) b.classList.add("incorrect");
     });
-    if (!modeState.counted) {
+    if (!modeState.counted && target) {
       modeState.counted = true;
       score.total++;
-      const allCorrect = nameCorrect && modeState.mistakes === 0;
-      if (allCorrect) score.correct++;
-      SRS.review(modeState.opening.name, allCorrect ? "good" : "again");
+      if (nameCorrect) score.correct++;
+      SRS.review(target.name, nameCorrect ? "good" : "again");
       saveScore();
       renderScore();
       if (modeState.historyEntry) modeState.historyEntry.graded = true;
     }
+    // Stash the resolved opening on modeState so subsequent renders show the
+    // pills/description for what was actually played.
+    modeState.opening = target;
     renderPanel();
   }
 
@@ -925,58 +1058,65 @@
   }
 
   function renderPlayPanel() {
-    const { opening, userSide, moveIndex, mistakes, complete, isMystery, nameAnswered } = modeState;
+    const { opening, userSide, mistakes, complete, isMystery, nameAnswered, matchedOpening } = modeState;
     panelEl.innerHTML = "";
 
     const h = document.createElement("h2");
     h.textContent = isMystery ? "Play and identify" : "Play the opening";
     panelEl.appendChild(h);
 
+    // Reveal target depends on mode: for "play", it's the pre-picked opening;
+    // for mystery before identifying, hide everything and show the played
+    // count; after identifying, show whatever the user landed on.
+    const revealOpening = isMystery ? matchedOpening : opening;
+    const playedCount = game.history().length;
+
     const meta = document.createElement("div");
     meta.className = "opening-meta";
-    // For mystery cards, hide name + ECO + assessment until the user picks
-    // it from the choices. For named-play, show as soon as the card loads.
     if (isMystery && !nameAnswered) {
       meta.innerHTML = `
-        <div class="name">Mystery opening — make the book moves and identify it after.</div>
-        <div class="progress"><div style="width:${(moveIndex / opening.moves.length) * 100}%"></div></div>
+        <div class="name">Mystery line — keep playing book moves; the app picks where to stop.</div>
       `;
-    } else {
+    } else if (revealOpening) {
       meta.innerHTML = `
-        <div class="name"><span class="eco">${opening.eco}</span>${escapeHtml(opening.name)}</div>
-        ${complete && nameAnswered ? renderOpeningPillsHtml(opening, { includeEval: true }) : ""}
-        ${complete && nameAnswered ? `<div class="desc">${escapeHtml(opening.description)}</div>` : ""}
-        ${complete && nameAnswered && opening.assessment ? `<div class="assessment">${escapeHtml(opening.assessment)}</div>` : ""}
-        <div class="progress"><div style="width:${(moveIndex / opening.moves.length) * 100}%"></div></div>
+        <div class="name"><span class="eco">${revealOpening.eco}</span>${escapeHtml(revealOpening.name)}</div>
+        ${complete && nameAnswered ? renderOpeningPillsHtml(revealOpening, { includeEval: true }) : ""}
+        ${complete && nameAnswered ? `<div class="desc">${escapeHtml(revealOpening.description)}</div>` : ""}
+        ${complete && nameAnswered && revealOpening.assessment ? `<div class="assessment">${escapeHtml(revealOpening.assessment)}</div>` : ""}
+        ${!isMystery ? `<div class="progress"><div style="width:${(playedCount / opening.moves.length) * 100}%"></div></div>` : ""}
       `;
     }
     panelEl.appendChild(meta);
-    if (complete && nameAnswered) {
-      try { fetchAndShowEval(fenFromMoves(opening.moves)); } catch (e) {}
+    if (complete && nameAnswered && revealOpening) {
+      try { fetchAndShowEval(fenFromMoves(revealOpening.moves)); } catch (e) {}
     }
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
     if (complete) {
-      if (isMystery && !nameAnswered) sub.textContent = "Opening complete. What did you just play?";
+      if (isMystery && !nameAnswered) sub.textContent = "Line complete. What opening did the app land on?";
       else if (mistakes === 0) sub.textContent = "Perfect — you played the book line cleanly.";
       else sub.textContent = "Completed (with mistakes / hints).";
     } else {
       const youSide = userSide === "white" ? "White" : "Black";
       const turn = game.turn() === "w" ? "White" : "Black";
       const yourTurn = turn === youSide;
-      if (yourTurn) {
-        sub.textContent = `You're playing as ${youSide}. Your move (${moveIndex + 1} / ${opening.moves.length}).`;
+      if (isMystery) {
+        sub.textContent = yourTurn
+          ? `You're playing as ${youSide}. Make any standard book move (${playedCount + 1}).`
+          : `You're playing as ${youSide}. ${turn} (the app) is replying…`;
       } else {
-        sub.textContent = `You're playing as ${youSide}. ${turn} (the app) is replying…`;
+        sub.textContent = yourTurn
+          ? `You're playing as ${youSide}. Your move (${playedCount + 1} / ${opening.moves.length}).`
+          : `You're playing as ${youSide}. ${turn} (the app) is replying…`;
       }
     }
     panelEl.appendChild(sub);
 
-    // Mystery: identification choices once moves are done.
-    if (isMystery && complete && !nameAnswered) {
-      const distractors = getRandomOpenings(3, opening);
-      const choices = shuffle([opening, ...distractors]);
+    // Mystery: identification choices once the line ends.
+    if (isMystery && complete && !nameAnswered && matchedOpening) {
+      const distractors = getRandomOpenings(3, matchedOpening);
+      const choices = shuffle([matchedOpening, ...distractors]);
       const choicesDiv = document.createElement("div");
       choicesDiv.className = "choices";
       for (const c of choices) {
@@ -990,12 +1130,13 @@
       panelEl.appendChild(choicesDiv);
     }
 
-    // Show the move list only after completion + identification (for mystery
-    // cards). For named-play, show on completion.
+    // Show the move list once we're done. For mystery, show what the user
+    // actually played (game.history()) — for named-play, the canonical line.
     if (complete && (!isMystery || nameAnswered)) {
+      const movesToShow = isMystery ? game.history() : opening.moves;
       const ml = document.createElement("div");
       ml.className = "move-list";
-      ml.innerHTML = renderMoveListHtml(opening.moves, opening.moves.length, true);
+      ml.innerHTML = renderMoveListHtml(movesToShow, movesToShow.length, true);
       panelEl.appendChild(ml);
     }
 
