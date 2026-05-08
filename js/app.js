@@ -54,9 +54,11 @@
     if (currentMode === "explore") {
       game.reset();
       modeState.lastMove = null;
+      modeState.freestyle = false;
+      modeState.exploreRedoStack = [];
       board.setPosition(game.board(), null);
       updateTurnIndicator();
-      renderPanel();
+      selectExplore(OPENINGS[0]);
     } else if (currentMode === "practice" && modeState.questionType === "setup") {
       // Replay the opening from the start position. We deliberately keep
       // modeState.counted/mistakes intact: if the user already finished the
@@ -446,18 +448,20 @@
 
   // ===== Explore Mode =====
   function startExplore() {
-    modeState = { selected: null, ply: 0, query: "" };
+    modeState = { selected: null, ply: 0, query: "", freestyle: false };
     selectExplore(OPENINGS[0]);
   }
 
   function selectExplore(opening) {
     modeState.selected = opening;
     modeState.ply = opening.moves.length;
+    modeState.freestyle = false;
     applyExploreState();
     renderPanel();
   }
 
   function applyExploreState() {
+    if (modeState.freestyle) return; // game state already reflects played moves
     if (!modeState.selected) return;
     const moves = modeState.selected.moves.slice(0, modeState.ply);
     game.reset();
@@ -471,11 +475,49 @@
   }
 
   function exploreStep(delta) {
+    if (modeState.freestyle) {
+      // In freestyle, ←/→ undo/redo via chess.js history.
+      if (delta < 0) {
+        const m = game.undo();
+        if (!m) return;
+        modeState.exploreRedoStack = modeState.exploreRedoStack || [];
+        modeState.exploreRedoStack.push(m);
+      } else if (delta > 0) {
+        const m = modeState.exploreRedoStack && modeState.exploreRedoStack.pop();
+        if (!m) return;
+        game.move({ from: m.from, to: m.to, promotion: m.promotion });
+      } else {
+        // up/down jumps: jump to start (delta -Infinity) or end (Infinity)
+        return;
+      }
+      const last = game.history({ verbose: true }).slice(-1)[0];
+      modeState.selected = findMatchingOpening();
+      board.setPosition(game.board(), last ? { from: last.from, to: last.to } : null);
+      updateTurnIndicator();
+      renderPanel();
+      return;
+    }
     if (!modeState.selected) return;
     const max = modeState.selected.moves.length;
     modeState.ply = Math.max(0, Math.min(max, modeState.ply + delta));
     applyExploreState();
     renderPanel();
+  }
+
+  // Free play: any legal move drops us into "freestyle" mode where the panel
+  // shows the played moves and whatever opening (if any) the position
+  // matches. Selecting from the openings list at the bottom or hitting Reset
+  // exits freestyle.
+  function handleExploreMoveAttempt({ from, to }) {
+    const m = game.move({ from, to, promotion: "q" });
+    if (!m) return false;
+    modeState.freestyle = true;
+    modeState.selected = findMatchingOpening();
+    modeState.exploreRedoStack = []; // a new branch wipes redo history
+    board.setPosition(game.board(), { from: m.from, to: m.to });
+    updateTurnIndicator();
+    renderPanel();
+    return true;
   }
 
   // ===== Stats blocks (inlined into the Practice panel) =====
@@ -640,6 +682,7 @@
       if (modeState.questionType === "setup") return handleSetupMoveAttempt(move);
       if (modeState.questionType === "play" || modeState.questionType === "playmystery") return handlePlayMoveAttempt(move);
     }
+    if (currentMode === "explore") return handleExploreMoveAttempt(move);
     return false;
   }
 
@@ -984,7 +1027,7 @@
   }
 
   function renderExplorePanel() {
-    const { selected, query } = modeState;
+    const { selected, query, freestyle } = modeState;
     panelEl.innerHTML = "";
     const h = document.createElement("h2");
     h.textContent = "Explore openings";
@@ -992,13 +1035,55 @@
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
-    sub.textContent = "Browse the database. Click an opening to view its position and step through moves. Arrow keys: ←→ step, ↑↓ jump.";
+    sub.textContent = freestyle
+      ? "Free play — make moves and the app names whatever opening the position matches. Reset to browse the list, or pick one below to load it."
+      : "Browse the list, or just start moving pieces — the app will name openings as you play. Arrow keys: ←→ step, ↑↓ jump.";
     panelEl.appendChild(sub);
+
+    // Detected opening + played moves panel (top): freestyle uses the live
+    // game.history(); browse uses the selected opening's canonical line.
+    if (freestyle) {
+      const played = game.history();
+      const div = document.createElement("div");
+      div.style.marginTop = "12px";
+      if (selected) {
+        div.innerHTML = `
+          <div class="opening-meta">
+            <div class="name"><span class="eco">${selected.eco}</span>${escapeHtml(selected.name)}</div>
+            ${renderOpeningPillsHtml(selected)}
+            <div class="desc">${escapeHtml(selected.description)}</div>
+            ${selected.assessment ? `<div class="assessment">${escapeHtml(selected.assessment)}</div>` : ""}
+          </div>
+        `;
+      } else {
+        div.innerHTML = `<div class="feedback info">No opening in the database matches the current position. Keep going — or hit Reset.</div>`;
+      }
+      if (played.length) {
+        div.innerHTML += `<div class="move-list" style="margin-top:10px">${renderMoveListHtml(played, played.length, true)}</div>`;
+      }
+      div.innerHTML += `
+        <div class="actions" style="margin-top:8px">
+          <button class="btn" id="ex-back">◀ Undo</button>
+          <button class="btn" id="ex-fwd">Redo ▶</button>
+          <button class="btn" id="ex-reset-free">Reset & browse</button>
+        </div>
+      `;
+      panelEl.appendChild(div);
+      panelEl.querySelector("#ex-back").addEventListener("click", () => exploreStep(-1));
+      panelEl.querySelector("#ex-fwd").addEventListener("click", () => exploreStep(1));
+      panelEl.querySelector("#ex-reset-free").addEventListener("click", () => {
+        game.reset();
+        modeState.freestyle = false;
+        modeState.exploreRedoStack = [];
+        selectExplore(OPENINGS[0]);
+      });
+    }
 
     const search = document.createElement("input");
     search.type = "text";
     search.placeholder = "Search openings…";
     search.className = "search-input";
+    search.style.marginTop = "12px";
     search.value = query || "";
     search.addEventListener("input", () => {
       modeState.query = search.value;
@@ -1013,7 +1098,7 @@
     list.innerHTML = renderOpeningListHtml(modeState);
     panelEl.appendChild(list);
 
-    if (selected) {
+    if (selected && !freestyle) {
       const div = document.createElement("div");
       div.style.marginTop = "12px";
       div.innerHTML = `
