@@ -1,5 +1,5 @@
 // Electron main process: opens a BrowserWindow that loads the static app.
-const { app, BrowserWindow, Menu, shell, ipcMain } = require("electron");
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const fsp = fs.promises;
@@ -207,3 +207,39 @@ function execp(cmd) {
 function shq(s) {
   return "'" + String(s).replace(/'/g, "'\\''") + "'";
 }
+
+// ===== Cloud-folder sync =====
+// The renderer asks the user to pick a folder once (typically inside their
+// Google Drive / iCloud / OneDrive / Dropbox install on this machine), and
+// from then on the app writes a progress.json there on every state change
+// and reads it on launch. The cloud client syncs the file device-to-device.
+
+const SYNC_FILENAME = "chess-openings-progress.json";
+
+ipcMain.handle("sync:pickFolder", async () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return null;
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Choose sync folder (e.g. inside Google Drive)",
+    message: "Pick a folder that's synced by your cloud client. The app will write progress.json there.",
+    properties: ["openDirectory", "createDirectory"]
+  });
+  if (result.canceled || !result.filePaths || !result.filePaths[0]) return null;
+  return result.filePaths[0];
+});
+
+ipcMain.handle("sync:read", async (_event, folder) => {
+  if (!folder) return null;
+  const filePath = path.join(folder, SYNC_FILENAME);
+  try {
+    return await fsp.readFile(filePath, "utf8");
+  } catch (e) {
+    return null;
+  }
+});
+
+ipcMain.handle("sync:write", async (_event, folder, content) => {
+  if (!folder) throw new Error("No sync folder configured");
+  const filePath = path.join(folder, SYNC_FILENAME);
+  await fsp.writeFile(filePath, content, "utf8");
+  return filePath;
+});

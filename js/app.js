@@ -1143,6 +1143,92 @@
     "chess-openings-trainer.tier-filter",
     "chess-openings-trainer.audience-filter"
   ];
+  const SYNC_FOLDER_KEY = "chess-openings-trainer.sync-folder";
+  const SYNC_LAST_TS_KEY = "chess-openings-trainer.sync-ts";
+
+  function buildProgressJson() {
+    const storage = {};
+    for (const k of SYNC_KEYS) {
+      const v = localStorage.getItem(k);
+      if (v != null) storage[k] = v;
+    }
+    return {
+      kind: "chess-openings-trainer-progress",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      appVersion: window.BUILD_VERSION || "dev",
+      storage
+    };
+  }
+
+  function applyImportedStorage(storage) {
+    for (const k of SYNC_KEYS) {
+      if (storage[k] != null) localStorage.setItem(k, storage[k]);
+      else localStorage.removeItem(k);
+    }
+  }
+
+  // Try to pull newer state from the configured sync folder. If we find a
+  // newer file there, apply it and reload. Called once at startup.
+  async function autoSyncOnLaunch() {
+    if (!window.syncFs) return;
+    const folder = localStorage.getItem(SYNC_FOLDER_KEY);
+    if (!folder) return;
+    let raw;
+    try { raw = await window.syncFs.read(folder); }
+    catch (e) { return; }
+    if (!raw) return;
+    let data;
+    try { data = JSON.parse(raw); }
+    catch (e) { return; }
+    if (!data || data.kind !== "chess-openings-trainer-progress" || !data.storage) return;
+    const remoteTs = Date.parse(data.exportedAt) || 0;
+    const localTs = parseInt(localStorage.getItem(SYNC_LAST_TS_KEY) || "0", 10);
+    // Only import if the file is meaningfully newer than what we last
+    // synced (5s tolerance to avoid loops on the same write).
+    if (remoteTs > localTs + 5000) {
+      applyImportedStorage(data.storage);
+      localStorage.setItem(SYNC_LAST_TS_KEY, String(remoteTs));
+      // Reload so renderers and SRS pick up the imported state.
+      location.reload();
+    }
+  }
+
+  // Debounced write — coalesces a burst of state changes into a single
+  // file write to avoid slamming the cloud client.
+  let _syncWriteTimer = null;
+  function autoSyncWriteDebounced() {
+    if (!window.syncFs) return;
+    const folder = localStorage.getItem(SYNC_FOLDER_KEY);
+    if (!folder) return;
+    if (_syncWriteTimer) clearTimeout(_syncWriteTimer);
+    _syncWriteTimer = setTimeout(async () => {
+      _syncWriteTimer = null;
+      try {
+        const data = buildProgressJson();
+        await window.syncFs.write(folder, JSON.stringify(data, null, 2));
+        localStorage.setItem(SYNC_LAST_TS_KEY, String(Date.parse(data.exportedAt)));
+      } catch (e) {
+        // Soft-fail: if the folder went away (Drive offline, etc.), just
+        // skip this write. Next change will retry.
+      }
+    }, 800);
+  }
+
+  // Wrap SRS.review so each review triggers a debounced sync write. The
+  // wrap runs once at module load. SRS internals are unchanged.
+  if (window.SRS && typeof window.SRS.review === "function") {
+    const _origReview = window.SRS.review;
+    window.SRS.review = function () {
+      const r = _origReview.apply(window.SRS, arguments);
+      autoSyncWriteDebounced();
+      return r;
+    };
+  }
+
+  // Kick off the launch-time pull. Fire-and-forget — it'll reload the page
+  // if it finds newer remote state.
+  autoSyncOnLaunch().catch(() => {});
 
   function exportProgress() {
     const storage = {};
@@ -1207,22 +1293,76 @@
     input.click();
   }
 
+  async function pickSyncFolder() {
+    if (!window.syncFs) {
+      alert("Auto-sync needs the desktop app build (won't work in dev mode).");
+      return;
+    }
+    const folder = await window.syncFs.pickFolder();
+    if (!folder) return;
+    localStorage.setItem(SYNC_FOLDER_KEY, folder);
+    // On first config: try to pull existing progress from the folder. If
+    // the file already exists (other device set up first), import. If not,
+    // write our current state out so the file appears in cloud sync.
+    let raw = null;
+    try { raw = await window.syncFs.read(folder); } catch (e) {}
+    if (raw) {
+      let data;
+      try { data = JSON.parse(raw); } catch (e) {}
+      if (data && data.kind === "chess-openings-trainer-progress" && data.storage) {
+        const ok = confirm(
+          "Found an existing progress file in that folder. Import it now? " +
+          "Your current local progress will be overwritten."
+        );
+        if (ok) {
+          applyImportedStorage(data.storage);
+          localStorage.setItem(SYNC_LAST_TS_KEY, String(Date.parse(data.exportedAt) || Date.now()));
+          location.reload();
+          return;
+        }
+      }
+    }
+    // No existing file (or user chose to keep local) — write current state.
+    autoSyncWriteDebounced();
+    renderPanel();
+  }
+
+  function clearSyncFolder() {
+    localStorage.removeItem(SYNC_FOLDER_KEY);
+    localStorage.removeItem(SYNC_LAST_TS_KEY);
+    renderPanel();
+  }
+
   function renderProgressSync() {
+    const folder = localStorage.getItem(SYNC_FOLDER_KEY) || "";
     const wrap = document.createElement("div");
     wrap.className = "stats-block";
     wrap.innerHTML = `
       <div class="stats-h3">Sync between devices</div>
       <div class="subtitle" style="margin-bottom:10px">
-        Export a JSON file of your SRS progress + filters + settings, drop it
-        in iCloud / OneDrive / email / USB, and import on the other machine.
-        Importing replaces this device's state with the file's contents (so
-        export from your most-recent device, then import on the other).
+        Auto-sync via a shared folder (Google Drive, iCloud, OneDrive, Dropbox).
+        Pick the same folder on each device — the app writes progress.json on
+        every change and reads it on launch; your cloud client moves it
+        between machines. Last-write-wins: avoid studying on two devices at
+        once while offline.
       </div>
+      <div class="sync-folder-row">
+        <span class="sync-folder-label">Folder:</span>
+        <code class="sync-folder-path">${folder ? escapeHtml(folder) : "(none — manual export only)"}</code>
+      </div>
+      <div class="actions" style="margin-bottom:10px">
+        <button class="btn" id="pick-sync-folder">${folder ? "Change sync folder…" : "Choose sync folder…"}</button>
+        ${folder ? '<button class="btn" id="clear-sync-folder">Clear</button>' : ""}
+      </div>
+      <div class="subtitle" style="margin: 14px 0 8px">Manual fallback (no setup)</div>
       <div class="actions">
         <button class="btn" id="export-progress">Export progress…</button>
         <button class="btn" id="import-progress">Import progress…</button>
       </div>
     `;
+    wrap.querySelector("#pick-sync-folder").addEventListener("click", pickSyncFolder);
+    const clearBtn = wrap.querySelector("#clear-sync-folder");
+    if (clearBtn) clearBtn.addEventListener("click", clearSyncFolder);
     wrap.querySelector("#export-progress").addEventListener("click", exportProgress);
     wrap.querySelector("#import-progress").addEventListener("click", importProgress);
     return wrap;
@@ -1919,6 +2059,7 @@
 
   function saveShowEngine() {
     try { localStorage.setItem(SHOW_ENGINE_KEY, String(showEngine)); } catch (e) {}
+    if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
   }
 
   function loadTierFilter() {
@@ -1934,6 +2075,7 @@
 
   function saveTierFilter() {
     try { localStorage.setItem(TIER_FILTER_KEY, JSON.stringify([...tierFilter])); } catch (e) {}
+    if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
   }
 
   function loadAudienceFilter() {
@@ -1949,6 +2091,7 @@
 
   function saveAudienceFilter() {
     try { localStorage.setItem(AUDIENCE_FILTER_KEY, JSON.stringify([...audienceFilter])); } catch (e) {}
+    if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
   }
 
   function openingMatchesAudience(o) {

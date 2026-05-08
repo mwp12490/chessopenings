@@ -1293,3 +1293,30 @@ body {
 .acc-meta.acc-good { color: #7fce85; }
 .acc-meta.acc-mid  { color: #d8c860; }
 .acc-meta.acc-bad  { color: #ee8c80; }
+
+.sync-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.sync-folder-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  font-size: 11px;
+}
+.sync-folder-path {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  background: var(--bg-elev-2);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text);
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+}

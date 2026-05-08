@@ -10,3 +10,12 @@ contextBridge.exposeInMainWorld("updater", {
     return () => ipcRenderer.removeListener("updater:progress", handler);
   }
 });
+
+// Sync: write/read a JSON file in a folder the user picked (typically a
+// folder inside iCloud Drive, OneDrive, Dropbox, or Google Drive — the
+// cloud provider does the device-to-device transfer).
+contextBridge.exposeInMainWorld("syncFs", {
+  pickFolder: () => ipcRenderer.invoke("sync:pickFolder"),
+  read: (folder) => ipcRenderer.invoke("sync:read", folder),
+  write: (folder, content) => ipcRenderer.invoke("sync:write", folder, content)
+});
