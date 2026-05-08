@@ -200,7 +200,8 @@ body {
 .square.last-from::after,
 .square.last-to::after,
 .square.legal::after,
-.square.legal-capture::after {
+.square.legal-capture::after,
+.square.hint::after {
   content: "";
   position: absolute;
   inset: 0;
