@@ -31,9 +31,15 @@
 
   <main class="layout">
     <section class="board-wrap">
-      <div class="board-shell">
-        <div id="board" class="board"></div>
-        <div id="board-overlay" class="board-overlay hidden"></div>
+      <div class="board-row">
+        <div class="eval-bar-vertical hidden" id="eval-bar-vertical">
+          <div class="eval-bar-fill" id="eval-bar-fill"></div>
+          <div class="eval-bar-label" id="eval-bar-label"></div>
+        </div>
+        <div class="board-shell">
+          <div id="board" class="board"></div>
+          <div id="board-overlay" class="board-overlay hidden"></div>
+        </div>
       </div>
       <div class="board-controls">
         <button id="flip-board" title="Flip board">&#x21c5; Flip</button>

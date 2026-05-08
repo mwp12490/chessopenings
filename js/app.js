@@ -859,9 +859,13 @@
       panelEl.scrollTop = 0;
       // Kick off engine analysis on the current position if the user has
       // toggled it on, or auto-on once the question has been revealed.
-      // Otherwise clear any leftover arrow.
-      if (showEngine || isQuestionRevealed()) triggerAnalysis();
-      else board.clearEngineArrow();
+      // Otherwise clear any leftover arrow + hide the side-of-board eval bar.
+      if (showEngine || isQuestionRevealed()) {
+        triggerAnalysis();
+      } else {
+        board.clearEngineArrow();
+        updateVerticalEvalBar(50, "", false);
+      }
       return;
     }
     if (currentMode === "explore") return renderExplorePanel();
@@ -1391,14 +1395,43 @@
       board.clearEngineArrow();
     }
 
+    // Update the vertical eval bar that sits next to the board.
+    updateVerticalEvalBar(pct, evalText, true);
+
     slot.innerHTML = `
-      <div class="eval-bar"><div class="white" style="width:${pct.toFixed(1)}%"></div><div class="black"></div></div>
       <div class="eval-readout">
         <span class="cp">${evalText}</span>
         <span class="depth">depth ${info.depth || "?"}${info.nodes ? " · " + (info.nodes/1000).toFixed(0) + "k nodes" : ""}</span>
       </div>
       <div class="bestline"><strong>Best line:</strong> ${escapeHtml(pvDisplay || "—")}</div>
     `;
+  }
+
+  function updateVerticalEvalBar(pct, evalText, visible) {
+    const bar = document.getElementById("eval-bar-vertical");
+    if (!bar) return;
+    if (!visible) {
+      bar.classList.add("hidden");
+      return;
+    }
+    const fill = document.getElementById("eval-bar-fill");
+    const label = document.getElementById("eval-bar-label");
+    // Match the bar to the board's orientation: when the user has flipped
+    // the board to view from Black's side, flip the eval too so "their"
+    // side is at the bottom.
+    const flipped = board.orientation === "black";
+    const whitePct = pct;
+    const fromBottomPct = flipped ? (100 - whitePct) : whitePct;
+    if (fill) fill.style.height = fromBottomPct.toFixed(1) + "%";
+    if (label) {
+      label.textContent = evalText;
+      // Place the label on whichever side has the smaller fill so it stays
+      // legible against the dark background.
+      const onTop = (flipped ? whitePct : (100 - whitePct)) >= 50;
+      label.classList.toggle("at-top", onTop);
+      label.classList.toggle("at-bottom", !onTop);
+    }
+    bar.classList.remove("hidden");
   }
 
   // ===== Helpers =====

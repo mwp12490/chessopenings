@@ -1097,3 +1097,58 @@ body {
   filter: brightness(1.05);
   color: #1a1a1a;
 }
+
+/* ===== Vertical eval bar (next to the board) ===== */
+.board-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.eval-bar-vertical {
+  width: 22px;
+  flex-shrink: 0;
+  background: #15171c;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  align-self: stretch;
+  /* Match the board's aspect-driven height by sizing relative to board-shell. */
+  min-height: 100%;
+}
+.eval-bar-vertical.hidden { display: none; }
+
+.eval-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, #f4f3eb 0%, #fafafa 100%);
+  transition: height 0.25s ease;
+  height: 50%;
+}
+
+.eval-bar-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+.eval-bar-label.at-top {
+  top: 4px;
+  color: #fafafa;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.eval-bar-label.at-bottom {
+  bottom: 4px;
+  color: #15171c;
+}
+
+/* The horizontal eval-bar inside the panel slot is gone — keep the slot's
+   readout + bestline rules intact. */
