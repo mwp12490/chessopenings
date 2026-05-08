@@ -52,7 +52,9 @@ jobs:
         shell: bash
 
       - name: Build ${{ matrix.label }} app
-        run: npm run dist:${{ matrix.target }}
+        run: |
+          set -o pipefail
+          npm run dist:${{ matrix.target }} 2>&1 | tee build.log
         shell: bash
         env:
           # Skip code-signing — produces unsigned builds. macOS shows a
@@ -65,6 +67,14 @@ jobs:
         if: always()
         run: ls -la dist/ || true
         shell: bash
+
+      - name: Upload build log (always, even on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.target }}
+          if-no-files-found: ignore
+          path: build.log
 
       - name: Upload ${{ matrix.label }} artifacts
         if: success()
