@@ -1129,8 +1129,103 @@
     panelEl.appendChild(renderEcoBreakdown(eco));
     panelEl.appendChild(renderHardest(hardest));
     panelEl.appendChild(renderPerOpening(perOp));
+    panelEl.appendChild(renderProgressSync());
     panelEl.appendChild(renderPillKey());
     panelEl.appendChild(renderEcoKey());
+  }
+
+  // Persisted-state keys we round-trip in the JSON export — SRS data plus
+  // the user's preferences. Score is intentionally session-only and not
+  // exported.
+  const SYNC_KEYS = [
+    "chess-openings-trainer.srs",
+    "chess-openings-trainer.show-engine",
+    "chess-openings-trainer.tier-filter",
+    "chess-openings-trainer.audience-filter"
+  ];
+
+  function exportProgress() {
+    const storage = {};
+    for (const k of SYNC_KEYS) {
+      const v = localStorage.getItem(k);
+      if (v != null) storage[k] = v;
+    }
+    const data = {
+      kind: "chess-openings-trainer-progress",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      appVersion: window.BUILD_VERSION || "dev",
+      storage
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "chess-openings-progress-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function importProgress() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      let data;
+      try {
+        const text = await file.text();
+        data = JSON.parse(text);
+      } catch (e) {
+        alert("Couldn't read that file as JSON.");
+        return;
+      }
+      if (!data || data.kind !== "chess-openings-trainer-progress" || !data.storage) {
+        alert("That doesn't look like a Chess Openings Trainer progress file.");
+        return;
+      }
+      const ok = confirm(
+        "Replace this machine's progress with the imported file? " +
+        "Your current SRS state and settings will be overwritten."
+      );
+      if (!ok) return;
+      for (const k of SYNC_KEYS) {
+        if (data.storage[k] != null) {
+          localStorage.setItem(k, data.storage[k]);
+        } else {
+          // Clear keys not present in the import so the two machines truly
+          // mirror after a sync.
+          localStorage.removeItem(k);
+        }
+      }
+      // Reload so SRS / filters / engine toggle pick up the new state.
+      location.reload();
+    });
+    input.click();
+  }
+
+  function renderProgressSync() {
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    wrap.innerHTML = `
+      <div class="stats-h3">Sync between devices</div>
+      <div class="subtitle" style="margin-bottom:10px">
+        Export a JSON file of your SRS progress + filters + settings, drop it
+        in iCloud / OneDrive / email / USB, and import on the other machine.
+        Importing replaces this device's state with the file's contents (so
+        export from your most-recent device, then import on the other).
+      </div>
+      <div class="actions">
+        <button class="btn" id="export-progress">Export progress…</button>
+        <button class="btn" id="import-progress">Import progress…</button>
+      </div>
+    `;
+    wrap.querySelector("#export-progress").addEventListener("click", exportProgress);
+    wrap.querySelector("#import-progress").addEventListener("click", importProgress);
+    return wrap;
   }
 
   function renderPerOpening(rows) {
