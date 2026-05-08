@@ -161,7 +161,7 @@
     board.setPosition(game.board(), null);
     updateTurnIndicator();
 
-    const distractors = getRandomOpenings(3, opening);
+    const distractors = getRandomOpenings(5, opening);
     const choices = shuffle([opening, ...distractors]);
 
     modeState = {
@@ -840,8 +840,9 @@
       // question, not where they happened to leave the previous scroll.
       panelEl.scrollTop = 0;
       // Kick off engine analysis on the current position if the user has
-      // toggled it on; otherwise make sure the arrow is cleared.
-      if (showEngine) triggerAnalysis();
+      // toggled it on, or auto-on once the question has been revealed.
+      // Otherwise clear any leftover arrow.
+      if (showEngine || isQuestionRevealed()) triggerAnalysis();
       else board.clearEngineArrow();
       return;
     }
@@ -851,14 +852,22 @@
   // Renders the "Engine analysis" toggle plus, when on, an eval-slot div
   // for triggerAnalysis to populate. Appended at the bottom of the Practice
   // panel content (before stats).
+  // Auto-enables once the current question is fully revealed (Identify
+  // answered / Setup complete / Mystery identified) so the user sees the
+  // engine's read of the resulting position without having to click.
   function appendEngineAnalysisSection() {
     const wrap = document.createElement("div");
     wrap.className = "engine-section";
 
+    const revealed = isQuestionRevealed();
+    const effectiveShow = showEngine || revealed;
+
     const btn = document.createElement("button");
-    btn.className = "engine-toggle" + (showEngine ? " active" : "");
-    btn.textContent = showEngine
-      ? "Engine analysis: ON — click to hide"
+    btn.className = "engine-toggle" + (effectiveShow ? " active" : "");
+    btn.textContent = effectiveShow
+      ? (revealed && !showEngine
+          ? "Engine analysis (auto-on after completion)"
+          : "Engine analysis: ON — click to hide")
       : "Show engine analysis (eval bar + best move arrow)";
     btn.addEventListener("click", () => {
       showEngine = !showEngine;
@@ -867,12 +876,22 @@
     });
     wrap.appendChild(btn);
 
-    if (showEngine) {
+    if (effectiveShow) {
       const slot = document.createElement("div");
       slot.className = "eval-slot";
       wrap.appendChild(slot);
     }
     panelEl.appendChild(wrap);
+  }
+
+  function isQuestionRevealed() {
+    if (currentMode !== "practice") return false;
+    const t = modeState.questionType;
+    if (t === "identify") return !!modeState.answered;
+    if (t === "setup") return !!modeState.complete;
+    if (t === "play") return !!modeState.complete;
+    if (t === "playmystery") return !!(modeState.complete && modeState.nameAnswered);
+    return false;
   }
 
   // Stats now live inline at the bottom of the Practice panel rather than in
@@ -1115,7 +1134,7 @@
 
     // Mystery: identification choices once the line ends.
     if (isMystery && complete && !nameAnswered && matchedOpening) {
-      const distractors = getRandomOpenings(3, matchedOpening);
+      const distractors = getRandomOpenings(5, matchedOpening);
       const choices = shuffle([matchedOpening, ...distractors]);
       const choicesDiv = document.createElement("div");
       choicesDiv.className = "choices";
@@ -1345,8 +1364,10 @@
       if (sanLine.length) pvDisplay = sanLine.join(" ");
     }
 
-    // Engine arrow: first move of the principal variation.
-    if (showEngine && info.pv && info.pv[0] && info.pv[0].length >= 4) {
+    // Engine arrow: first move of the principal variation. Drawn whenever
+    // the user has the engine toggle on, OR auto-on after question reveal.
+    const drawArrow = showEngine || isQuestionRevealed();
+    if (drawArrow && info.pv && info.pv[0] && info.pv[0].length >= 4) {
       board.setEngineArrow(info.pv[0].slice(0, 2), info.pv[0].slice(2, 4));
     } else {
       board.clearEngineArrow();
