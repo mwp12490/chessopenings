@@ -31,19 +31,18 @@
 
   <main class="layout">
     <section class="board-wrap">
-      <div class="board-row">
-        <div class="eval-bar-vertical hidden" id="eval-bar-vertical">
-          <div class="eval-bar-fill" id="eval-bar-fill"></div>
-          <div class="eval-bar-label" id="eval-bar-label"></div>
-        </div>
-        <div class="board-shell">
-          <div id="board" class="board"></div>
-          <div id="board-overlay" class="board-overlay hidden"></div>
-        </div>
+      <div class="board-shell">
+        <div id="board" class="board"></div>
+        <div id="board-overlay" class="board-overlay hidden"></div>
+      </div>
+      <div class="eval-bar-horizontal hidden" id="eval-bar-horizontal">
+        <div class="eval-bar-fill" id="eval-bar-fill"></div>
+        <div class="eval-bar-label" id="eval-bar-label"></div>
       </div>
       <div class="board-controls">
         <button id="flip-board" title="Flip board">&#x21c5; Flip</button>
         <button id="reset-board" title="Reset to start position">Reset</button>
+        <button id="engine-toggle" title="Toggle engine analysis (eval bar + best move arrow)">Engine: off</button>
         <span class="turn-indicator" id="turn-indicator">White to move</span>
       </div>
     </section>

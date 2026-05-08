@@ -68,6 +68,16 @@
     setMode(btn.dataset.mode);
   });
   document.getElementById("flip-board").addEventListener("click", () => board.flip());
+  document.getElementById("engine-toggle").addEventListener("click", () => {
+    showEngine = !showEngine;
+    saveShowEngine();
+    syncEngineToggleButton();
+    if (currentMode === "practice") renderPanel();
+    else if (!showEngine) {
+      board.clearEngineArrow();
+      updateVerticalEvalBar(50, "", false);
+    }
+  });
   document.getElementById("reset-board").addEventListener("click", () => {
     if (currentMode === "explore") {
       game.reset();
@@ -900,44 +910,41 @@
         board.clearEngineArrow();
         updateVerticalEvalBar(50, "", false);
       }
+      syncEngineToggleButton();
       return;
     }
     if (currentMode === "explore") return renderExplorePanel();
   }
 
-  // Renders the "Engine analysis" toggle plus, when on, an eval-slot div
-  // for triggerAnalysis to populate. Appended at the bottom of the Practice
-  // panel content (before stats).
-  // Auto-enables once the current question is fully revealed (Identify
-  // answered / Setup complete / Mystery identified) so the user sees the
-  // engine's read of the resulting position without having to click.
+  // Renders an eval-slot for triggerAnalysis to populate when engine
+  // analysis is active (or auto-on post-reveal). The toggle button itself
+  // lives in the board-controls row beside Flip/Reset, not here.
   function appendEngineAnalysisSection() {
+    const revealed = isQuestionRevealed();
+    if (!showEngine && !revealed) return;
     const wrap = document.createElement("div");
     wrap.className = "engine-section";
+    const slot = document.createElement("div");
+    slot.className = "eval-slot";
+    wrap.appendChild(slot);
+    panelEl.appendChild(wrap);
+  }
 
+  // Update the small engine toggle button in the board-controls row to
+  // reflect the current state.
+  function syncEngineToggleButton() {
+    const btn = document.getElementById("engine-toggle");
+    if (!btn) return;
     const revealed = isQuestionRevealed();
     const effectiveShow = showEngine || revealed;
-
-    const btn = document.createElement("button");
-    btn.className = "engine-toggle" + (effectiveShow ? " active" : "");
-    btn.textContent = effectiveShow
-      ? (revealed && !showEngine
-          ? "Engine analysis (auto-on after completion)"
-          : "Engine analysis: ON — click to hide")
-      : "Show engine analysis (eval bar + best move arrow)";
-    btn.addEventListener("click", () => {
-      showEngine = !showEngine;
-      saveShowEngine();
-      renderPanel();
-    });
-    wrap.appendChild(btn);
-
-    if (effectiveShow) {
-      const slot = document.createElement("div");
-      slot.className = "eval-slot";
-      wrap.appendChild(slot);
+    btn.classList.toggle("active", effectiveShow);
+    if (revealed && !showEngine) {
+      btn.textContent = "Engine: auto";
+      btn.title = "Engine analysis is auto-on after a question is revealed";
+    } else {
+      btn.textContent = "Engine: " + (showEngine ? "on" : "off");
+      btn.title = "Toggle engine analysis (eval bar + best move arrow)";
     }
-    panelEl.appendChild(wrap);
   }
 
   function isQuestionRevealed() {
@@ -1442,7 +1449,9 @@
   }
 
   function updateVerticalEvalBar(pct, evalText, visible) {
-    const bar = document.getElementById("eval-bar-vertical");
+    // Horizontal eval bar below the board. Kept the original function name
+    // to minimize churn at call sites.
+    const bar = document.getElementById("eval-bar-horizontal");
     if (!bar) return;
     if (!visible) {
       bar.classList.add("hidden");
@@ -1450,21 +1459,10 @@
     }
     const fill = document.getElementById("eval-bar-fill");
     const label = document.getElementById("eval-bar-label");
-    // Match the bar to the board's orientation: when the user has flipped
-    // the board to view from Black's side, flip the eval too so "their"
-    // side is at the bottom.
-    const flipped = board.orientation === "black";
-    const whitePct = pct;
-    const fromBottomPct = flipped ? (100 - whitePct) : whitePct;
-    if (fill) fill.style.height = fromBottomPct.toFixed(1) + "%";
-    if (label) {
-      label.textContent = evalText;
-      // Place the label on whichever side has the smaller fill so it stays
-      // legible against the dark background.
-      const onTop = (flipped ? whitePct : (100 - whitePct)) >= 50;
-      label.classList.toggle("at-top", onTop);
-      label.classList.toggle("at-bottom", !onTop);
-    }
+    // White's share of the bar fills from the left; doesn't flip with the
+    // board orientation (horizontal eval-bars are conventionally white-on-left).
+    if (fill) fill.style.width = pct.toFixed(1) + "%";
+    if (label) label.textContent = evalText;
     bar.classList.remove("hidden");
   }
 
