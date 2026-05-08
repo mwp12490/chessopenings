@@ -652,6 +652,368 @@ const OPENINGS = [
     assessment: "Severely weakens White's kingside — borderline unsound and considered dubious by every authority. Viable only as a one-off surprise against unprepared opponents.",
     tier: "F",
     popularity: 1
+  },
+
+  // ===== Sub-variations and additional intermediate-level lines =====
+  // Sicilian Defense sub-variations
+  {
+    name: "Richter-Rauzer Attack",
+    eco: "B62",
+    moves: ["e4","c5","Nf3","d6","d4","cxd4","Nxd4","Nf6","Nc3","Nc6","Bg5"],
+    description: "Classical Sicilian where White pins the f6-knight with Bg5 to disrupt Black's setup.",
+    assessment: "A heavily theoretical mainline that has stood for nearly a century — both sides know exactly what they're doing, and the resulting middlegames are well-mapped at the top level.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Najdorf English Attack",
+    eco: "B90",
+    moves: ["e4","c5","Nf3","d6","d4","cxd4","Nxd4","Nf6","Nc3","a6","Be3"],
+    description: "Sharp Najdorf treatment with Be3 preparing f3, Qd2 and queenside castling.",
+    assessment: "The most aggressive modern Najdorf system — opposite-side castling, rapid pawn storms. Top-level theory in both directions; concrete calculation matters more than general principles.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Najdorf Sozin Variation",
+    eco: "B86",
+    moves: ["e4","c5","Nf3","d6","d4","cxd4","Nxd4","Nf6","Nc3","a6","Bc4"],
+    description: "Aggressive Najdorf line aiming the bishop at f7 and preparing kingside attack.",
+    assessment: "Sound and dangerous at club level, though modern theory has Black's defensive resources well sorted. Less popular than the English Attack at the top but still a respectable weapon.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "Yugoslav Attack",
+    eco: "B77",
+    moves: ["e4","c5","Nf3","d6","d4","cxd4","Nxd4","Nf6","Nc3","g6","Be3","Bg7","f3"],
+    description: "Main anti-Dragon system: White prepares Qd2, O-O-O and a kingside pawn avalanche.",
+    assessment: "The classical refutation attempt of the Sicilian Dragon — both sides race for the opposing king with opposite-side castling. Sharpest opening in chess theory.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Maróczy Bind",
+    eco: "B36",
+    moves: ["e4","c5","Nf3","Nc6","d4","cxd4","Nxd4","g6","c4"],
+    description: "Anti-Accelerated-Dragon setup where c4 + e4 grips the d5 square long-term.",
+    assessment: "A small but lasting space advantage that's hard for Black to free; Karpov-style positional play. Sound and respected at the top level.",
+    tier: "B",
+    popularity: 2
+  },
+
+  // Ruy Lopez sub-variations
+  {
+    name: "Closed Ruy Lopez",
+    eco: "C84",
+    moves: ["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Be7"],
+    description: "The classical Spanish mainline; both sides develop and prepare for a long maneuvering middlegame.",
+    assessment: "The deepest opening in chess theory — entire books exist on its sub-variations. A staple at every level from club through world championship.",
+    tier: "S",
+    popularity: 4
+  },
+  {
+    name: "Open Ruy Lopez",
+    eco: "C80",
+    moves: ["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Nxe4"],
+    description: "Black grabs the e4 pawn instead of supporting e5 — leads to sharp, open positions.",
+    assessment: "An aggressive, time-honored response — Korchnoi and Anand have used it in title matches. Sharp tactical play with concrete equalizing chances.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Marshall Attack",
+    eco: "C89",
+    moves: ["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O","Be7","Re1","b5","Bb3","O-O","c3","d5"],
+    description: "Black sacrifices the e5 pawn for a long-lasting initiative on the kingside.",
+    assessment: "A dangerous prepared weapon for Black — even at the top level White often sidesteps with anti-Marshall lines. Sound and venomous.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Ruy Lopez Exchange",
+    eco: "C68",
+    moves: ["e4","e5","Nf3","Nc6","Bb5","a6","Bxc6"],
+    description: "White trades on c6 immediately, doubling Black's pawns for a long endgame edge.",
+    assessment: "Simpler than the closed Spanish but still venomous — Bobby Fischer used it to great effect. Easier to learn while preserving real winning chances.",
+    tier: "B",
+    popularity: 3
+  },
+  {
+    name: "Schliemann Defense",
+    eco: "C63",
+    moves: ["e4","e5","Nf3","Nc6","Bb5","f5"],
+    aliases: ["Jaenisch Gambit"],
+    description: "Black throws ...f5 to disrupt White's setup, accepting a weakened kingside.",
+    assessment: "Sharp and surprisingly resilient at club level, though deeply analyzed lines give White a small edge. A respectable surprise weapon.",
+    tier: "C",
+    popularity: 1
+  },
+  {
+    name: "Ruy Lopez Steinitz Defense",
+    eco: "C62",
+    moves: ["e4","e5","Nf3","Nc6","Bb5","d6"],
+    description: "Old solid defense supporting e5 with the d-pawn — quiet and a bit passive.",
+    assessment: "Reliable but cramped — Black's piece play is restricted. Steinitz himself defended it; modern players prefer the more active Berlin or Closed.",
+    tier: "C",
+    popularity: 1
+  },
+
+  // French Defense sub-variations
+  {
+    name: "French McCutcheon",
+    eco: "C12",
+    moves: ["e4","e6","d4","d5","Nc3","Nf6","Bg5","Bb4"],
+    description: "Sharp pinning system — Black challenges White's setup with an immediate ...Bb4.",
+    assessment: "Double-edged from the start — both sides accept structural concessions for activity. Theoretically sound and a regular guest in tournament play.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "French Classical",
+    eco: "C11",
+    moves: ["e4","e6","d4","d5","Nc3","Nf6","e5"],
+    description: "White advances e5 to clamp down on the kingside; Black plans ...c5 and ...f6 breaks.",
+    assessment: "A classical wedge that gives White space; modern theory has Black's counterplay well-mapped. Sound for both sides.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "French Rubinstein",
+    eco: "C10",
+    moves: ["e4","e6","d4","d5","Nc3","dxe4"],
+    description: "Black accepts a slightly worse but solid position by trading on e4 immediately.",
+    assessment: "Solid and drawish — Black avoids most theoretical headaches. White retains a small edge but real winning chances against a prepared opponent are limited.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "French Burn",
+    eco: "C11",
+    moves: ["e4","e6","d4","d5","Nc3","Nf6","Bg5","dxe4"],
+    description: "Black breaks the pin by capturing on e4, simplifying into solid territory.",
+    assessment: "A pragmatic solidifier — Black trades pieces and reaches comfortable structures. Used at the top level by players seeking minimal risk.",
+    tier: "B",
+    popularity: 2
+  },
+
+  // Caro-Kann sub-variations
+  {
+    name: "Caro-Kann Two Knights",
+    eco: "B11",
+    moves: ["e4","c6","Nc3","d5","Nf3"],
+    description: "White develops both knights early; flexible setup avoiding the main Caro-Kann theory.",
+    assessment: "A modest sideline — sound enough but doesn't pose Black serious problems. Used as a move-order tool more than for advantage.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "Caro-Kann Karpov",
+    eco: "B17",
+    moves: ["e4","c6","d4","d5","Nc3","dxe4","Nxe4","Nd7"],
+    description: "Solid mainline where Black prepares ...Ngf6 without allowing the knight trade.",
+    assessment: "Karpov's signature — exemplifies prophylactic Caro-Kann play. Rock-solid and a workhorse at the top level for decades.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Caro-Kann Tartakower",
+    eco: "B16",
+    moves: ["e4","c6","d4","d5","Nc3","dxe4","Nxe4","Nf6","Nxf6+","gxf6"],
+    description: "Black recaptures with the g-pawn, accepting doubled pawns for the half-open g-file.",
+    assessment: "A committal but interesting choice — Black gets the bishop pair and an open g-file. Less popular than Karpov-style play but sound at master level.",
+    tier: "B",
+    popularity: 2
+  },
+
+  // Queen's Gambit Declined sub-variations
+  {
+    name: "QGD Tartakower",
+    eco: "D58",
+    moves: ["d4","d5","c4","e6","Nc3","Nf6","Bg5","Be7","e3","O-O","Nf3","h6","Bh4","b6"],
+    description: "Black fianchettoes the queen's bishop to develop the worst piece in the QGD.",
+    assessment: "The standard solution to the QGD's bad-bishop problem — sound and respected, played by Spassky, Karpov, Kramnik. Drawish but reliable.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "QGD Lasker Defense",
+    eco: "D56",
+    moves: ["d4","d5","c4","e6","Nc3","Nf6","Bg5","Be7","e3","O-O","Nf3","h6","Bh4","Ne4"],
+    description: "Black trades pieces with ...Ne4 to relieve the cramped position.",
+    assessment: "Black's classical equalizer — exchange enough pieces and you don't suffer. Boris Gelfand and Vladimir Kramnik favorites.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "QGD Cambridge Springs",
+    eco: "D52",
+    moves: ["d4","d5","c4","e6","Nc3","Nf6","Bg5","Nbd7","e3","c6","Nf3","Qa5"],
+    description: "Tactical Black setup using ...Qa5 to attack the c3-knight and the Bg5.",
+    assessment: "Trickier than it looks — White must navigate accurately or fall into tactical traps. Sound club-level weapon, less common at the top.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "QGD Orthodox Defense",
+    eco: "D63",
+    moves: ["d4","d5","c4","e6","Nc3","Nf6","Bg5","Be7","e3","O-O","Nf3","Nbd7"],
+    description: "Classical solid QGD setup — Black develops naturally without committal pawn moves.",
+    assessment: "The ur-QGD — a tournament workhorse for over a century. Forgives small inaccuracies and is the standard recommendation for new students of 1.d4 d5 setups.",
+    tier: "A",
+    popularity: 3
+  },
+
+  // Slav sub-variations
+  {
+    name: "Slav Chebanenko",
+    eco: "D15",
+    moves: ["d4","d5","c4","c6","Nf3","Nf6","Nc3","a6"],
+    description: "Modern Slav where Black plays ...a6 first to keep maximum flexibility.",
+    assessment: "Carlsen-era Slav — flexible and concrete, Black waits to see White's setup before committing. Solid as the older Slav lines but harder to grind down.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Slav Schlechter",
+    eco: "D44",
+    moves: ["d4","d5","c4","c6","Nf3","Nf6","Nc3","e6","Bg5","dxc4"],
+    description: "Slav line where Black takes on c4 in response to Bg5 — sharp, principled play.",
+    assessment: "A respected sideline of the Semi-Slav family — sound theoretical foundations but less common than the main Anti-Meran or Botvinnik lines.",
+    tier: "B",
+    popularity: 2
+  },
+
+  // King's Indian Defense main lines
+  {
+    name: "KID Mar del Plata",
+    eco: "E97",
+    moves: ["d4","Nf6","c4","g6","Nc3","Bg7","e4","d6","Nf3","O-O","Be2","e5","O-O","Nc6","d5"],
+    description: "Classical King's Indian where d5 closes the center and triggers a wing race.",
+    assessment: "The KID at its purest — White attacks queenside, Black attacks kingside, neither side helps the other. Sharp and concrete.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "KID Sämisch Variation",
+    eco: "E80",
+    moves: ["d4","Nf6","c4","g6","Nc3","Bg7","e4","d6","f3"],
+    description: "White plays f3 early to lock down the center and prepare a kingside pawn avalanche.",
+    assessment: "Anti-KID system that takes the fight on White's terms — slow and strategic if Black plays passively, sharp if Black goes for ...c5 or ...e5 breaks.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "KID Fianchetto Variation",
+    eco: "E62",
+    moves: ["d4","Nf6","c4","g6","Nc3","Bg7","g3"],
+    description: "White fianchettoes the king's bishop, neutralizing Black's hypermodern setup.",
+    assessment: "The quiet anti-KID — White takes the sting out of ...e5 and ...f5 by mirroring the kingside fianchetto. Sound, drawish, but rarely refuted.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "KID Bayonet Attack",
+    eco: "E97",
+    moves: ["d4","Nf6","c4","g6","Nc3","Bg7","e4","d6","Nf3","O-O","Be2","e5","O-O","Nc6","d5","Ne7","b4"],
+    description: "White rushes b4 to crack the queenside before Black's kingside attack arrives.",
+    assessment: "Modern weapon of choice against the KID's Mar del Plata — Kramnik used it heavily. Concrete and dangerous if Black isn't precise.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "KID Four Pawns Attack",
+    eco: "E76",
+    moves: ["d4","Nf6","c4","g6","Nc3","Bg7","e4","d6","f4"],
+    description: "White grabs maximum central space with f4 — committal but ambitious.",
+    assessment: "Romantic anti-KID with c4/d4/e4/f4 pawn wedge. Risky — overextends, and Black has well-known counters with ...c5 or ...e5. Sound but rarely top choice.",
+    tier: "B",
+    popularity: 1
+  },
+
+  // Nimzo-Indian sub-variations
+  {
+    name: "Nimzo-Indian Rubinstein",
+    eco: "E40",
+    moves: ["d4","Nf6","c4","e6","Nc3","Bb4","e3"],
+    description: "Most popular Nimzo treatment — White develops solidly with e3 and Nf3.",
+    assessment: "The flexible workhorse against the Nimzo — White avoids structural damage and prepares Bd3 / Nf3 / O-O. Standard at every level.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Nimzo-Indian Classical",
+    eco: "E32",
+    moves: ["d4","Nf6","c4","e6","Nc3","Bb4","Qc2"],
+    description: "Capablanca's setup: Qc2 prevents the doubled pawns and prepares slow positional play.",
+    assessment: "A solid mainline — White avoids the structural concessions of the Sämisch but accepts a tempo loss. Carlsen has used it as a go-to weapon.",
+    tier: "A",
+    popularity: 3
+  },
+  {
+    name: "Nimzo-Indian Sämisch",
+    eco: "E25",
+    moves: ["d4","Nf6","c4","e6","Nc3","Bb4","a3","Bxc3+","bxc3"],
+    description: "White accepts doubled c-pawns in exchange for the bishop pair and a strong center.",
+    assessment: "Bishop pair vs structural damage — a long-running positional argument. Sound but theoretically demanding; less common than the Rubinstein at the top.",
+    tier: "B",
+    popularity: 2
+  },
+
+  // Other intermediate-level standalone openings
+  {
+    name: "Tarrasch Defense",
+    eco: "D32",
+    moves: ["d4","d5","c4","e6","Nc3","c5"],
+    description: "Black challenges the center with ...c5, accepting an isolated d-pawn for activity.",
+    assessment: "Active piece play vs. structural weakness — a classical IQP debate. Sound but theoretically hard to play; Kasparov used it as a young player.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "Old Indian Defense",
+    eco: "A53",
+    moves: ["d4","Nf6","c4","d6"],
+    description: "Pre-King's-Indian setup; Black prepares ...e5 instead of fianchettoing the bishop.",
+    assessment: "Solid but passive — Black gives up the kingside fianchetto to keep the position quieter. Less popular than the King's Indian since the hypermodern era.",
+    tier: "C",
+    popularity: 1
+  },
+  {
+    name: "Englund Gambit",
+    eco: "A40",
+    moves: ["d4","e5"],
+    description: "Black sacrifices the e-pawn immediately to disrupt White's central plans.",
+    assessment: "Practically refuted at master level — White's correct moves give a clear extra pawn with no compensation. Pure surprise weapon.",
+    tier: "F",
+    popularity: 1
+  },
+  {
+    name: "Blackmar-Diemer Gambit",
+    eco: "D00",
+    moves: ["d4","d5","e4","dxe4","Nc3"],
+    description: "White sacrifices the e-pawn for rapid development and attacking chances.",
+    assessment: "Tricky club-level attacking weapon — Black has clear declining systems but accepting the gambit invites real trouble. Considered insufficient at master level.",
+    tier: "D",
+    popularity: 1
+  },
+  {
+    name: "Stonewall Dutch",
+    eco: "A95",
+    moves: ["d4","f5","c4","Nf6","Nf3","e6","g3","d5"],
+    description: "Black builds a pawn wedge on c6/d5/e6/f5 — slow but solid kingside attack setup.",
+    assessment: "A specific Dutch structure favoring strategic play — the wedge is hard to break but Black's c8-bishop suffers. Sound at every level.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "Leningrad Dutch",
+    eco: "A87",
+    moves: ["d4","f5","c4","Nf6","Nf3","g6"],
+    description: "Hypermodern Dutch where Black fianchettoes the king's bishop King's-Indian-style.",
+    assessment: "More dynamic than the Stonewall — Black accepts the f5 weakening for active piece play and kingside attacking chances. Sound and respectable.",
+    tier: "B",
+    popularity: 2
   }
 ];
 
@@ -757,7 +1119,9 @@ const BEGINNER_FRIENDLY_OPENINGS = new Set([
   "Scandinavian Defense",
   "Queen's Gambit", "Queen's Gambit Accepted", "Queen's Gambit Declined",
   "Slav Defense", "London System", "Torre Attack", "Colle System",
-  "King's Indian Attack"
+  "King's Indian Attack",
+  // Sub-variation additions easy enough to start with
+  "Ruy Lopez Exchange", "QGD Orthodox Defense", "Blackmar-Diemer Gambit"
 ]);
 
 const INTERMEDIATE_FRIENDLY_OPENINGS = new Set([
@@ -781,7 +1145,21 @@ const INTERMEDIATE_FRIENDLY_OPENINGS = new Set([
   "French Advance", "Panov-Botvinnik Attack", "Scandinavian Defense",
   "Pirc Defense", "Modern Defense", "Alekhine's Defense",
   "Bogo-Indian Defense", "Benoni Defense", "Modern Benoni",
-  "Benko Gambit", "Dutch Defense"
+  "Benko Gambit", "Dutch Defense",
+  // Sub-variations and additional intermediate-level lines
+  "Richter-Rauzer Attack", "Najdorf English Attack", "Najdorf Sozin Variation",
+  "Yugoslav Attack", "Maróczy Bind",
+  "Closed Ruy Lopez", "Open Ruy Lopez", "Marshall Attack",
+  "Ruy Lopez Exchange", "Schliemann Defense", "Ruy Lopez Steinitz Defense",
+  "French McCutcheon", "French Classical", "French Rubinstein", "French Burn",
+  "Caro-Kann Two Knights", "Caro-Kann Karpov", "Caro-Kann Tartakower",
+  "QGD Tartakower", "QGD Lasker Defense", "QGD Cambridge Springs", "QGD Orthodox Defense",
+  "Slav Chebanenko", "Slav Schlechter",
+  "KID Mar del Plata", "KID Sämisch Variation", "KID Fianchetto Variation",
+  "KID Bayonet Attack", "KID Four Pawns Attack",
+  "Nimzo-Indian Rubinstein", "Nimzo-Indian Classical", "Nimzo-Indian Sämisch",
+  "Tarrasch Defense", "Old Indian Defense", "Blackmar-Diemer Gambit",
+  "Stonewall Dutch", "Leningrad Dutch"
 ]);
 
 const GM_FRIENDLY_OPENINGS = new Set([
@@ -797,7 +1175,20 @@ const GM_FRIENDLY_OPENINGS = new Set([
   "King's Indian Defense", "Grünfeld Defense", "Nimzo-Indian Defense",
   "Queen's Indian Defense", "Catalan Opening",
   "London System", "Trompowsky Attack",
-  "English Opening", "Réti Opening"
+  "English Opening", "Réti Opening",
+  // Sub-variations regularly seen in modern top-level play
+  "Richter-Rauzer Attack", "Najdorf English Attack",
+  "Yugoslav Attack", "Maróczy Bind",
+  "Closed Ruy Lopez", "Open Ruy Lopez", "Marshall Attack",
+  "Ruy Lopez Exchange",
+  "French McCutcheon", "French Classical", "French Rubinstein", "French Burn",
+  "Caro-Kann Karpov",
+  "QGD Tartakower", "QGD Lasker Defense", "QGD Orthodox Defense",
+  "Slav Chebanenko",
+  "KID Mar del Plata", "KID Sämisch Variation", "KID Fianchetto Variation",
+  "KID Bayonet Attack",
+  "Nimzo-Indian Rubinstein", "Nimzo-Indian Classical",
+  "Tarrasch Defense"
 ]);
 
 for (const op of OPENINGS) {
