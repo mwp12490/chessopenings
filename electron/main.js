@@ -80,8 +80,8 @@ app.on("window-all-closed", () => {
 // swaps the new bundle into /Applications, strips quarantine, and reopens.
 
 ipcMain.handle("updater:install", async (_event, url) => {
-  if (process.platform !== "darwin") {
-    throw new Error("In-app update is implemented only on macOS.");
+  if (process.platform !== "darwin" && process.platform !== "win32") {
+    throw new Error("In-app update is implemented only on macOS and Windows.");
   }
   if (!url || !/^https:\/\//.test(url)) {
     throw new Error("Invalid update URL.");
@@ -95,6 +95,22 @@ ipcMain.handle("updater:install", async (_event, url) => {
 
   const tmp = os.tmpdir();
   const stamp = Date.now();
+
+  if (process.platform === "win32") {
+    // Windows: download the NSIS installer and launch it. The user steps
+    // through the (small) installer dialog; NSIS handles upgrading the
+    // existing installation in place. We exit so the installer can replace
+    // our running binary.
+    const exePath = path.join(tmp, `cot-update-${stamp}.exe`);
+    send("Downloading update…");
+    await downloadHttps(url, exePath);
+    send("Launching installer…");
+    shell.openPath(exePath).catch(() => {});
+    setTimeout(() => app.quit(), 500);
+    return { ok: true };
+  }
+
+  // macOS path
   const dmgPath = path.join(tmp, `cot-update-${stamp}.dmg`);
   const mountPoint = path.join(tmp, `cot-mount-${stamp}`);
   const stagedApp = path.join(tmp, `cot-staged-${stamp}.app`);

@@ -74,9 +74,12 @@
         show("v" + window.BUILD_VERSION + " — up to date", { autoHide: 2500 });
         return;
       }
-      const dmgAsset = (data.assets || []).find((a) => /\.dmg$/i.test(a.name || ""));
-      const dmgUrl = dmgAsset ? dmgAsset.browser_download_url : null;
-      const canInstall = !!(dmgUrl && window.updater && window.updater.install);
+      // Pick the asset whose extension matches the OS we're running on.
+      const isWindows = /Windows/i.test(navigator.userAgent);
+      const wantedExt = isWindows ? /\.exe$/i : /\.dmg$/i;
+      const asset = (data.assets || []).find((a) => wantedExt.test(a.name || ""));
+      const assetUrl = asset ? asset.browser_download_url : null;
+      const canInstall = !!(assetUrl && window.updater && window.updater.install);
 
       if (canInstall) {
         show("New version available (v" + latest + ")", {
@@ -90,7 +93,7 @@
               window.updater.onProgress((msg) => { label.textContent = msg; });
             }
             try {
-              await window.updater.install(dmgUrl);
+              await window.updater.install(assetUrl);
             } catch (err) {
               label.textContent = "Install failed: " + (err && err.message ? err.message : err) + " — opening download page…";
               lk.style.pointerEvents = "";

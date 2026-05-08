@@ -1,4 +1,4 @@
-name: Build Mac App
+name: Build Mac & Windows App
 
 on:
   push:
@@ -11,8 +11,20 @@ permissions:
   contents: write
 
 jobs:
-  build-mac:
-    runs-on: macos-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+            ext: dmg
+            label: Mac
+          - os: windows-latest
+            target: win
+            ext: exe
+            label: Windows
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
@@ -24,10 +36,12 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci 2>&1 | tee install.log
+        run: npm ci
+        shell: bash
 
       - name: Compute build version
         run: echo "BUILD_VERSION=1.0.${{ github.run_number }}" >> $GITHUB_ENV
+        shell: bash
 
       - name: Bump package.json and embed build info
         run: |
@@ -35,42 +49,34 @@ jobs:
           node -e "require('fs').writeFileSync('js/build-info.js','// Generated at build time by GitHub Actions.\nwindow.BUILD_VERSION = \"'+process.env.BUILD_VERSION+'\";\n')"
           grep '"version"' package.json
           cat js/build-info.js
+        shell: bash
 
-      - name: Build Mac app (.dmg, unsigned, arm64)
-        run: |
-          set -o pipefail
-          npm run dist:mac 2>&1 | tee build.log
+      - name: Build ${{ matrix.label }} app
+        run: npm run dist:${{ matrix.target }}
+        shell: bash
         env:
-          # Skip code-signing — produces an unsigned build.
-          # macOS will warn on first launch; right-click → Open to bypass.
+          # Skip code-signing — produces unsigned builds. macOS shows a
+          # right-click → Open warning the first time; Windows shows a
+          # SmartScreen "More info → Run anyway" the first time.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
           DEBUG: electron-builder
 
       - name: List build output
         if: always()
         run: ls -la dist/ || true
+        shell: bash
 
-      - name: Upload Mac build artifacts
+      - name: Upload ${{ matrix.label }} artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: chess-openings-trainer-mac
+          name: chess-openings-trainer-${{ matrix.target }}
           if-no-files-found: error
           path: |
-            dist/*.dmg
+            dist/*.${{ matrix.ext }}
             dist/*.blockmap
 
-      - name: Upload build logs (always)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          if-no-files-found: ignore
-          path: |
-            install.log
-            build.log
-
-      - name: Publish GitHub Release
+      - name: Publish to GitHub Release
         if: success()
         uses: softprops/action-gh-release@v2
         with:
@@ -79,10 +85,13 @@ jobs:
           make_latest: "true"
           fail_on_unmatched_files: true
           files: |
-            dist/*.dmg
+            dist/*.${{ matrix.ext }}
             dist/*.blockmap
           body: |
             Auto-built from `${{ github.ref_name }}` @ ${{ github.sha }}.
 
-            Drag the `.dmg` into Applications. First launch: right-click → Open → Open
-            to bypass the unsigned-app warning.
+            **Mac**: download the `.dmg`, drag into Applications. First launch:
+            right-click → Open → Open to bypass the unsigned-app warning.
+
+            **Windows**: download the `.exe`, run it. If SmartScreen warns,
+            click "More info" → "Run anyway".
