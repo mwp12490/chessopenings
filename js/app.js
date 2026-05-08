@@ -91,7 +91,6 @@
     if (mode === "practice") startPractice();
     else if (mode === "explore") startExplore();
     else if (mode === "analysis") startAnalysis();
-    else if (mode === "stats") startStats();
   }
 
   // ===== Practice Mode (mixed identify + setup) =====
@@ -328,15 +327,7 @@
     renderPanel();
   }
 
-  // ===== Stats Mode =====
-  function startStats() {
-    // Park the board on the start position so the left side isn't stale.
-    game.reset();
-    board.setOrientation("white");
-    board.setPosition(game.board(), null);
-    updateTurnIndicator();
-    renderPanel();
-  }
+  // ===== Stats blocks (inlined into the Practice panel) =====
 
   const ECO_FAMILY_LABELS = {
     A: "Flank openings",
@@ -345,30 +336,6 @@
     D: "Closed games",
     E: "Indian defenses"
   };
-
-  function renderStatsPanel() {
-    panelEl.innerHTML = "";
-    const h = document.createElement("h2");
-    h.textContent = "Stats";
-    panelEl.appendChild(h);
-
-    const sub = document.createElement("div");
-    sub.className = "subtitle";
-    sub.textContent = "Your spaced-repetition progress across the openings deck.";
-    panelEl.appendChild(sub);
-
-    const deck = SRS.deckStats(OPENINGS);
-    const fc = SRS.forecast(OPENINGS);
-    const hardest = SRS.hardest(OPENINGS, 5);
-    const eco = SRS.byEco(OPENINGS);
-
-    panelEl.appendChild(renderDeckSummary(deck));
-    panelEl.appendChild(renderForecast(fc));
-    panelEl.appendChild(renderEcoBreakdown(eco));
-    panelEl.appendChild(renderHardest(hardest));
-    panelEl.appendChild(renderPillKey());
-    panelEl.appendChild(renderEcoKey());
-  }
 
   function renderPillKey() {
     const wrap = document.createElement("div");
@@ -618,12 +585,33 @@
   // ===== UI rendering =====
   function renderPanel(isAfterAnswer) {
     if (currentMode === "practice") {
-      if (modeState.questionType === "setup") return renderSetupPanel();
-      return renderIdentifyPanel(isAfterAnswer);
+      if (modeState.questionType === "setup") renderSetupPanel();
+      else renderIdentifyPanel(isAfterAnswer);
+      appendInlineStats();
+      return;
     }
     if (currentMode === "explore") return renderExplorePanel();
     if (currentMode === "analysis") return renderAnalysisPanel();
-    if (currentMode === "stats") return renderStatsPanel();
+  }
+
+  // Stats now live inline at the bottom of the Practice panel rather than in
+  // a separate tab. Reuses the same block builders the old Stats tab used.
+  function appendInlineStats() {
+    const sep = document.createElement("div");
+    sep.className = "stats-divider";
+    sep.innerHTML = `<span>Your progress</span>`;
+    panelEl.appendChild(sep);
+
+    const deck = SRS.deckStats(OPENINGS);
+    const fc = SRS.forecast(OPENINGS);
+    const hardest = SRS.hardest(OPENINGS, 5);
+    const eco = SRS.byEco(OPENINGS);
+    panelEl.appendChild(renderDeckSummary(deck));
+    panelEl.appendChild(renderForecast(fc));
+    panelEl.appendChild(renderEcoBreakdown(eco));
+    panelEl.appendChild(renderHardest(hardest));
+    panelEl.appendChild(renderPillKey());
+    panelEl.appendChild(renderEcoKey());
   }
 
   function renderIdentifyPanel(isAfterAnswer) {
