@@ -56,6 +56,16 @@ jobs:
         run: ls -la dist/ || true
         shell: bash
 
+      - name: Print build log on failure
+        if: failure()
+        run: |
+          echo "=========================================="
+          echo "BUILD LOG (printed inline so you can read it without downloading the artifact)"
+          echo "=========================================="
+          cat build.log || echo "(no build.log produced)"
+          echo "=========================================="
+        shell: bash
+
       - name: Upload build log (always, even on failure)
         if: always()
         uses: actions/upload-artifact@v4
