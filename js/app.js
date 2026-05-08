@@ -302,8 +302,19 @@
       return true;
     } else {
       modeState.mistakes++;
-      flashFeedback(panelEl.querySelector(".feedback-slot"),
-        "Not quite — that move doesn't match this opening's main line. Try again.", "bad");
+      // If the move IS a valid book move for some other opening, name it —
+      // so a wrong attempt becomes a teaching moment instead of just "no".
+      const newSeq = [...game.history(), move.san];
+      const others = findCandidateOpenings(newSeq)
+        .filter(op => op.name !== modeState.opening.name);
+      let msg;
+      if (others.length) {
+        others.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        msg = `That's the ${others[0].name} line, not the ${modeState.opening.name}. Try again.`;
+      } else {
+        msg = "Not quite — that move doesn't match this opening's main line. Try again.";
+      }
+      flashFeedback(panelEl.querySelector(".feedback-slot"), msg, "bad");
       return false;
     }
   }
@@ -501,8 +512,19 @@
       return true;
     }
     modeState.mistakes++;
-    flashFeedback(panelEl.querySelector(".feedback-slot"),
-      "Not the book move for this opening — try again.", "bad");
+    // Same teaching nudge as Setup: if the move is in another opening's
+    // book line, name that opening.
+    const otherSeq = [...game.history(), move.san];
+    const others = findCandidateOpenings(otherSeq)
+      .filter(op => op.name !== modeState.opening.name);
+    let msg;
+    if (others.length) {
+      others.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+      msg = `That's the ${others[0].name} line, not the ${modeState.opening.name}. Try again.`;
+    } else {
+      msg = "Not the book move for this opening — try again.";
+    }
+    flashFeedback(panelEl.querySelector(".feedback-slot"), msg, "bad");
     return false;
   }
 
