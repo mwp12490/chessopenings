@@ -554,6 +554,7 @@
     om.className = "opening-meta";
     om.innerHTML = `
       <div class="name"><span class="eco">${matched.eco}</span>${escapeHtml(matched.name)}</div>
+      ${renderOpeningPillsHtml(matched)}
       <div class="desc">${escapeHtml(matched.description)}</div>
     `;
     const arrowsRow = panelEl.querySelector(".checkbox-row");
@@ -632,9 +633,10 @@
     if (answered) {
       const fb = document.createElement("div");
       fb.className = "feedback info";
-      const side = openingSide(opening);
-      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco}) <span class="side-tag side-${side.toLowerCase()}">${side}'s opening</span><br/>${escapeHtml(opening.description)}<br/><br/><span style="color:var(--text-dim)">Moves: ${formatNumberedSan(opening.moves)}</span>`;
+      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco})${renderOpeningPillsHtml(opening, { includeEval: true })}${escapeHtml(opening.description)}<br/><br/><span style="color:var(--text-dim)">Moves: ${formatNumberedSan(opening.moves)}</span>`;
       panelEl.appendChild(fb);
+      // Engine eval of the position after the opening's main line.
+      try { fetchAndShowEval(fenFromMoves(opening.moves)); } catch (e) {}
 
       const actions = document.createElement("div");
       actions.className = "actions";
@@ -692,16 +694,19 @@
 
     const meta = document.createElement("div");
     meta.className = "opening-meta";
-    // Description and side can mention specific squares / hints, so they're
-    // gated behind completion — hidden during the question, revealed when
-    // the user finishes (or hits "Show solution").
-    const side = openingSide(opening);
+    // Description and badges can leak hints (specific squares, side, etc) so
+    // they're gated behind completion — hidden during the question, revealed
+    // when the user finishes (or hits "Show solution").
     meta.innerHTML = `
-      <div class="name"><span class="eco">${opening.eco}</span>${escapeHtml(opening.name)}${complete ? ` <span class="side-tag side-${side.toLowerCase()}">${side}'s opening</span>` : ""}</div>
+      <div class="name"><span class="eco">${opening.eco}</span>${escapeHtml(opening.name)}</div>
+      ${complete ? renderOpeningPillsHtml(opening, { includeEval: true }) : ""}
       ${complete ? `<div class="desc">${escapeHtml(opening.description)}</div>` : ""}
       <div class="progress"><div style="width:${(moveIndex / opening.moves.length) * 100}%"></div></div>
     `;
     panelEl.appendChild(meta);
+    if (complete) {
+      try { fetchAndShowEval(fenFromMoves(opening.moves)); } catch (e) {}
+    }
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
@@ -860,6 +865,7 @@
       om.className = "opening-meta";
       om.innerHTML = `
         <div class="name"><span class="eco">${matched.eco}</span>${escapeHtml(matched.name)}</div>
+        ${renderOpeningPillsHtml(matched)}
         <div class="desc">${escapeHtml(matched.description)}</div>
       `;
       panelEl.appendChild(om);
@@ -991,6 +997,68 @@
   // Najdorf" / "King's Indian Defense" are Black's responses.
   function openingSide(opening) {
     return (opening.moves.length % 2 === 1) ? "White" : "Black";
+  }
+
+  // Renders the row of small pills that goes under an opening's name:
+  // side · tier · popularity stars · async engine eval slot.
+  // Returns the HTML string so callers can drop it into innerHTML alongside
+  // the rest of the meta block.
+  function renderOpeningPillsHtml(opening, opts = {}) {
+    const side = openingSide(opening);
+    const tier = opening.tier || "solid";
+    const tierInfo = TIER_INFO[tier] || { label: tier, desc: "" };
+    const pop = Math.max(1, Math.min(4, opening.popularity || 2));
+    const stars = "★".repeat(pop) + "☆".repeat(4 - pop);
+    const popLabel = POPULARITY_LABELS[pop] || "";
+    const evalSlot = opts.includeEval
+      ? `<span class="eval-pill" data-eval-pill title="Stockfish eval of the position after the opening's main line">eval …</span>`
+      : "";
+    return `
+      <div class="opening-pills">
+        <span class="side-tag side-${side.toLowerCase()}">${side}</span>
+        <span class="tier-pill tier-${tier}" title="${escapeHtml(tierInfo.desc)}">${escapeHtml(tierInfo.label)}</span>
+        <span class="popularity-pill" title="${escapeHtml(popLabel)} at master level">${stars}</span>
+        ${evalSlot}
+      </div>
+    `;
+  }
+
+  // Kick off engine analysis on `fen` and update the eval-pill inside the
+  // currently-rendered panel when the engine answers. A token guards against
+  // races: if the user moves on, the token mismatch makes us drop the result.
+  let _evalRequestToken = 0;
+  function fetchAndShowEval(fen) {
+    if (!engine || !engine.ready) return;
+    const myToken = ++_evalRequestToken;
+    engine.analyze(fen, { depth: 14 }).then(({ info }) => {
+      if (myToken !== _evalRequestToken) return; // user moved on
+      const pill = panelEl.querySelector("[data-eval-pill]");
+      if (!pill) return;
+      const turn = (fen.split(" ")[1] || "w");
+      let cp = info && info.cp;
+      let mate = info && info.mate;
+      // Normalize to White's POV (engine reports from side-to-move).
+      if (turn === "b") {
+        if (cp != null) cp = -cp;
+        if (mate != null) mate = -mate;
+      }
+      let text, cls;
+      if (mate != null) {
+        text = "M" + Math.abs(mate);
+        cls = mate > 0 ? "eval-good" : "eval-bad";
+      } else if (cp != null) {
+        const n = cp / 100;
+        text = (n >= 0 ? "+" : "") + n.toFixed(2);
+        if (Math.abs(cp) <= 30) cls = "eval-equal";
+        else cls = (cp > 0) ? "eval-good" : "eval-bad";
+      } else {
+        text = "—";
+        cls = "eval-equal";
+      }
+      pill.textContent = text;
+      pill.classList.remove("eval-good","eval-bad","eval-equal");
+      pill.classList.add(cls);
+    }).catch(() => {});
   }
 
   // Find the longest known opening whose moves match a prefix of the played
