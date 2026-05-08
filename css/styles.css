@@ -1270,3 +1270,26 @@ body {
   color: #7ab8e3;
   border-color: #3a6b94;
 }
+
+.acc-bar {
+  width: 70px;
+  height: 6px;
+  background: var(--bg-elev-2);
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+.acc-bar-fill {
+  display: block;
+  height: 100%;
+  transition: width 0.2s ease;
+}
+.acc-bar-fill.acc-good { background: #5cc97c; }
+.acc-bar-fill.acc-mid  { background: #d8c860; }
+.acc-bar-fill.acc-bad  { background: #ee8c80; }
+
+.acc-meta { min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
+.acc-meta.acc-good { color: #7fce85; }
+.acc-meta.acc-mid  { color: #d8c860; }
+.acc-meta.acc-bad  { color: #ee8c80; }

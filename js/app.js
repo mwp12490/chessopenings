@@ -1122,13 +1122,38 @@
     const hardest = SRS.hardest(OPENINGS, 5);
     const eco = SRS.byEco(OPENINGS);
     const tier = SRS.byTier(OPENINGS);
+    const perOp = SRS.perOpening(OPENINGS);
     panelEl.appendChild(renderDeckSummary(deck));
     panelEl.appendChild(renderForecast(fc));
     panelEl.appendChild(renderTierBreakdown(tier));
     panelEl.appendChild(renderEcoBreakdown(eco));
     panelEl.appendChild(renderHardest(hardest));
+    panelEl.appendChild(renderPerOpening(perOp));
     panelEl.appendChild(renderPillKey());
     panelEl.appendChild(renderEcoKey());
+  }
+
+  function renderPerOpening(rows) {
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    let body;
+    if (!rows.length) {
+      body = `<div class="subtitle">Practice some openings to see your per-opening accuracy here.</div>`;
+    } else {
+      body = rows.map(({ opening, successes, total, accuracy }) => {
+        const pct = Math.round(accuracy);
+        const cls = pct >= 80 ? "acc-good" : (pct >= 50 ? "acc-mid" : "acc-bad");
+        return `
+          <div class="hard-row">
+            <span class="eco">${opening.eco}</span>
+            <span class="hard-name">${escapeHtml(opening.name)}</span>
+            <span class="acc-bar"><span class="acc-bar-fill ${cls}" style="width:${pct}%"></span></span>
+            <span class="hard-meta acc-meta ${cls}">${successes}/${total} · ${pct}%</span>
+          </div>`;
+      }).join("");
+    }
+    wrap.innerHTML = `<div class="stats-h3">Per-opening accuracy</div>${body}`;
+    return wrap;
   }
 
   function renderTierBreakdown(tier) {

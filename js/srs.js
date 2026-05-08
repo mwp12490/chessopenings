@@ -64,6 +64,7 @@
       card.ease = Math.max(1.3, card.ease - 0.2);
       card.due = now + 60 * 1000; // 1 minute relearning step
     } else if (grade === "easy") {
+      card.successes = (card.successes || 0) + 1;
       if (card.reps === 0) card.interval = 4;
       else if (card.reps === 1) card.interval = 7;
       else card.interval = Math.max(1, Math.round(card.interval * card.ease * 1.3));
@@ -71,6 +72,7 @@
       card.ease = Math.min(3.5, card.ease + 0.15);
       card.due = now + card.interval * DAY_MS;
     } else { // "good"
+      card.successes = (card.successes || 0) + 1;
       if (card.reps === 0) card.interval = 1;
       else if (card.reps === 1) card.interval = 3;
       else card.interval = Math.max(1, Math.round(card.interval * card.ease));
@@ -110,6 +112,30 @@
       .filter(x => x.card && (x.card.lapses + x.card.reps) >= 2 && x.card.lapses > 0)
       .sort((a, b) => (b.card.lapses - a.card.lapses) || (a.card.ease - b.card.ease))
       .slice(0, n || 5);
+  }
+
+  // Per-opening accuracy: total successes / (successes + lapses).
+  // Excludes openings the user hasn't reviewed yet.
+  // Returns rows sorted by accuracy descending.
+  function perOpening(pool) {
+    const rows = [];
+    for (const o of pool) {
+      const c = state[o.name];
+      if (!c) continue;
+      const succ = c.successes || 0;
+      const fail = c.lapses || 0;
+      const total = succ + fail;
+      if (total === 0) continue;
+      rows.push({
+        opening: o,
+        successes: succ,
+        lapses: fail,
+        total,
+        accuracy: (succ / total) * 100
+      });
+    }
+    rows.sort((a, b) => b.accuracy - a.accuracy);
+    return rows;
   }
 
   // Mastery breakdown by tier letter (S/A/B/C/D/F).
@@ -159,6 +185,7 @@
     return { today, tomorrow, week };
   }
 
-  window.SRS = { pickNext, review, deckStats, hardest, byEco, byTier, forecast,
+  window.SRS = { pickNext, review, deckStats, hardest, byEco, byTier,
+    forecast, perOpening,
     getCard: (name) => state[name] || null };
 })();
