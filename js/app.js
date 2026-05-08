@@ -12,10 +12,10 @@
   const engineStatusEl = document.getElementById("engine-status");
 
   const SCORE_GOAL_PCT = 80;
-  const SHOW_ARROWS_KEY = "chess-openings-trainer.show-arrows";
+  const SHOW_ENGINE_KEY = "chess-openings-trainer.show-engine";
   // Score is per-session — not persisted across launches.
   let score = { correct: 0, total: 0 };
-  let showArrows = loadShowArrows();
+  let showEngine = loadShowEngine();
   renderScore();
 
   validateOpenings();
@@ -51,13 +51,12 @@
   });
   document.getElementById("flip-board").addEventListener("click", () => board.flip());
   document.getElementById("reset-board").addEventListener("click", () => {
-    if (currentMode === "analysis" || currentMode === "explore") {
+    if (currentMode === "explore") {
       game.reset();
       modeState.lastMove = null;
       board.setPosition(game.board(), null);
       updateTurnIndicator();
       renderPanel();
-      if (currentMode === "analysis") triggerAnalysis();
     } else if (currentMode === "practice" && modeState.questionType === "setup") {
       // Replay the opening from the start position. We deliberately keep
       // modeState.counted/mistakes intact: if the user already finished the
@@ -90,7 +89,6 @@
     modeState = {};
     if (mode === "practice") startPractice();
     else if (mode === "explore") startExplore();
-    else if (mode === "analysis") startAnalysis();
   }
 
   // ===== Practice Mode (mixed identify + setup) =====
@@ -615,106 +613,12 @@
     return wrap;
   }
 
-  // ===== Engine Analysis Mode =====
-  function startAnalysis() {
-    // Don't reset the game — coming in from Practice should let the user
-    // analyze the position they just played. Use the FEN/Reset controls if
-    // they want to start over.
-    modeState = { lastMove: null, eval: null, info: null, redoStack: [] };
-    board.setOrientation("white");
-    board.setPosition(game.board(), null);
-    updateTurnIndicator();
-    renderPanel();
-    triggerAnalysis();
-  }
-
-  function handleAnalysisMoveAttempt({ from, to }) {
-    const m = game.move({ from, to, promotion: "q" });
-    if (!m) return false;
-    // A new move from a viewed-past position branches off — drop forward history.
-    if (modeState.redoStack) modeState.redoStack = [];
-    modeState.lastMove = { from: m.from, to: m.to };
-    board.setPosition(game.board(), modeState.lastMove);
-    updateTurnIndicator();
-    triggerAnalysis();
-    refreshAnalysisOpeningMeta();
-    return true;
-  }
-
-  // ===== Analysis history navigation =====
-  function analysisStepBack() {
-    const m = game.undo();
-    if (!m) return;
-    modeState.redoStack.push(m);
-    const top = game.history({ verbose: true }).slice(-1)[0];
-    modeState.lastMove = top ? { from: top.from, to: top.to } : null;
-    board.setPosition(game.board(), modeState.lastMove);
-    updateTurnIndicator();
-    triggerAnalysis();
-    refreshAnalysisOpeningMeta();
-  }
-
-  function analysisStepForward() {
-    const m = modeState.redoStack && modeState.redoStack.pop();
-    if (!m) return;
-    game.move({ from: m.from, to: m.to, promotion: m.promotion });
-    modeState.lastMove = { from: m.from, to: m.to };
-    board.setPosition(game.board(), modeState.lastMove);
-    updateTurnIndicator();
-    triggerAnalysis();
-    refreshAnalysisOpeningMeta();
-  }
-
-  function analysisJumpToStart() {
-    let m;
-    while ((m = game.undo())) modeState.redoStack.push(m);
-    modeState.lastMove = null;
-    board.setPosition(game.board(), null);
-    updateTurnIndicator();
-    triggerAnalysis();
-    refreshAnalysisOpeningMeta();
-  }
-
-  function analysisJumpToEnd() {
-    while (modeState.redoStack && modeState.redoStack.length) {
-      const m = modeState.redoStack.pop();
-      game.move({ from: m.from, to: m.to, promotion: m.promotion });
-      modeState.lastMove = { from: m.from, to: m.to };
-    }
-    board.setPosition(game.board(), modeState.lastMove);
-    updateTurnIndicator();
-    triggerAnalysis();
-    refreshAnalysisOpeningMeta();
-  }
-
-  // Surgically swap out (or remove) the opening-meta block in the analysis
-  // panel without rebuilding the whole panel — keeps the FEN input + eval
-  // slot intact.
-  function refreshAnalysisOpeningMeta() {
-    if (currentMode !== "analysis") return;
-    const existing = panelEl.querySelector(".opening-meta");
-    if (existing) existing.remove();
-    const matched = findMatchingOpening();
-    if (!matched) return;
-    const om = document.createElement("div");
-    om.className = "opening-meta";
-    om.innerHTML = `
-      <div class="name"><span class="eco">${matched.eco}</span>${escapeHtml(matched.name)}</div>
-      ${renderOpeningPillsHtml(matched)}
-      <div class="desc">${escapeHtml(matched.description)}</div>
-      ${matched.assessment ? `<div class="assessment">${escapeHtml(matched.assessment)}</div>` : ""}
-    `;
-    const arrowsRow = panelEl.querySelector(".checkbox-row");
-    if (arrowsRow) panelEl.insertBefore(om, arrowsRow);
-    else panelEl.appendChild(om);
-  }
-
   let _analysisDispose = null;
   function triggerAnalysis() {
-    if (currentMode !== "analysis") return;
+    const slot = panelEl.querySelector(".eval-slot");
+    if (!slot) return; // nothing to populate, no point firing the engine
     if (!engine.ready) {
-      const slot = panelEl.querySelector(".eval-slot");
-      if (slot) slot.innerHTML = '<div class="feedback bad">Stockfish is not loaded — analysis unavailable.</div>';
+      slot.innerHTML = '<div class="feedback bad">Stockfish is not loaded — analysis unavailable.</div>';
       return;
     }
     if (_analysisDispose) _analysisDispose();
@@ -736,7 +640,6 @@
       if (modeState.questionType === "setup") return handleSetupMoveAttempt(move);
       if (modeState.questionType === "play" || modeState.questionType === "playmystery") return handlePlayMoveAttempt(move);
     }
-    if (currentMode === "analysis") return handleAnalysisMoveAttempt(move);
     return false;
   }
 
@@ -746,6 +649,9 @@
       if (modeState.questionType === "setup") renderSetupPanel();
       else if (modeState.questionType === "play" || modeState.questionType === "playmystery") renderPlayPanel();
       else renderIdentifyPanel(isAfterAnswer);
+      // Engine analysis section (toggle + eval slot) is appended at the
+      // bottom of the practice content, above the stats divider.
+      appendEngineAnalysisSection();
       // Wrap everything the practice render just produced into a single
       // div so we can give it a min-height that fills the visible panel
       // area. Stats rendered after the wrap end up below the fold.
@@ -757,10 +663,38 @@
       // Reset scroll to top on every new render so the user sees the
       // question, not where they happened to leave the previous scroll.
       panelEl.scrollTop = 0;
+      // Kick off engine analysis on the current position if the user has
+      // toggled it on; otherwise make sure the arrow is cleared.
+      if (showEngine) triggerAnalysis();
+      else board.clearEngineArrow();
       return;
     }
     if (currentMode === "explore") return renderExplorePanel();
-    if (currentMode === "analysis") return renderAnalysisPanel();
+  }
+
+  // Renders the optional "Show engine analysis" toggle plus, when on, an
+  // eval-slot div for triggerAnalysis to populate. Appended at the bottom
+  // of the Practice panel content (before stats).
+  function appendEngineAnalysisSection() {
+    const wrap = document.createElement("div");
+    wrap.className = "engine-section";
+
+    const row = document.createElement("label");
+    row.className = "checkbox-row";
+    row.innerHTML = `<input type="checkbox" id="show-engine-toggle" ${showEngine ? "checked" : ""}/> Show engine analysis (eval bar + best move arrow)`;
+    wrap.appendChild(row);
+    row.querySelector("#show-engine-toggle").addEventListener("change", (e) => {
+      showEngine = !!e.target.checked;
+      saveShowEngine();
+      renderPanel();
+    });
+
+    if (showEngine) {
+      const slot = document.createElement("div");
+      slot.className = "eval-slot";
+      wrap.appendChild(slot);
+    }
+    panelEl.appendChild(wrap);
   }
 
   // Stats now live inline at the bottom of the Practice panel rather than in
@@ -1132,84 +1066,8 @@
     }).join("");
   }
 
-  function renderAnalysisPanel() {
-    panelEl.innerHTML = "";
-    const h = document.createElement("h2");
-    h.textContent = "Engine Analysis";
-    panelEl.appendChild(h);
-
-    const sub = document.createElement("div");
-    sub.className = "subtitle";
-    sub.textContent = "Make moves freely on the board. Stockfish analyzes the position in real time. Arrow keys ←→ step, ↑↓ jump.";
-    panelEl.appendChild(sub);
-
-    // Opening detection: name the position if its move sequence matches a known opening.
-    const matched = findMatchingOpening();
-    if (matched) {
-      const om = document.createElement("div");
-      om.className = "opening-meta";
-      om.innerHTML = `
-        <div class="name"><span class="eco">${matched.eco}</span>${escapeHtml(matched.name)}</div>
-        ${renderOpeningPillsHtml(matched)}
-        <div class="desc">${escapeHtml(matched.description)}</div>
-        ${matched.assessment ? `<div class="assessment">${escapeHtml(matched.assessment)}</div>` : ""}
-      `;
-      panelEl.appendChild(om);
-    }
-
-    const arrowsRow = document.createElement("label");
-    arrowsRow.className = "checkbox-row";
-    arrowsRow.innerHTML = `<input type="checkbox" id="show-arrows-toggle" ${showArrows ? "checked" : ""}/> Show engine arrow on board`;
-    panelEl.appendChild(arrowsRow);
-    arrowsRow.querySelector("#show-arrows-toggle").addEventListener("change", (e) => {
-      showArrows = !!e.target.checked;
-      saveShowArrows();
-      if (!showArrows) board.clearEngineArrow();
-      renderEval();
-    });
-
-    const slot = document.createElement("div");
-    slot.className = "eval-slot";
-    panelEl.appendChild(slot);
-
-    const fenBox = document.createElement("div");
-    fenBox.style.marginTop = "12px";
-    fenBox.innerHTML = `
-      <div class="subtitle" style="margin-bottom:4px">FEN</div>
-      <input class="search-input" id="fen-input" value="${game.fen()}" />
-      <div class="actions" style="margin-top:8px">
-        <button class="btn" id="fen-load">Load FEN</button>
-        <button class="btn" id="fen-undo">Undo</button>
-      </div>
-    `;
-    panelEl.appendChild(fenBox);
-
-    panelEl.querySelector("#fen-load").addEventListener("click", () => {
-      const v = panelEl.querySelector("#fen-input").value.trim();
-      if (game.load(v)) {
-        modeState.lastMove = null;
-        board.setPosition(game.board(), null);
-        updateTurnIndicator();
-        triggerAnalysis();
-      } else {
-        flashFeedback(slot, "Invalid FEN string.", "bad");
-      }
-    });
-    panelEl.querySelector("#fen-undo").addEventListener("click", () => {
-      const undone = game.undo();
-      if (undone) {
-        modeState.lastMove = null;
-        board.setPosition(game.board(), null);
-        updateTurnIndicator();
-        triggerAnalysis();
-      }
-    });
-
-    renderEval();
-  }
 
   function renderEval() {
-    if (currentMode !== "analysis") return;
     const slot = panelEl.querySelector(".eval-slot");
     if (!slot) return;
     const info = modeState.info;
@@ -1260,7 +1118,7 @@
     }
 
     // Engine arrow: first move of the principal variation.
-    if (showArrows && info.pv && info.pv[0] && info.pv[0].length >= 4) {
+    if (showEngine && info.pv && info.pv[0] && info.pv[0].length >= 4) {
       board.setEngineArrow(info.pv[0].slice(0, 2), info.pv[0].slice(2, 4));
     } else {
       board.clearEngineArrow();
@@ -1414,16 +1272,16 @@
     // No-op — score is session-only by design.
   }
 
-  function loadShowArrows() {
+  function loadShowEngine() {
     try {
-      const raw = localStorage.getItem(SHOW_ARROWS_KEY);
-      if (raw == null) return true; // default on
+      const raw = localStorage.getItem(SHOW_ENGINE_KEY);
+      if (raw == null) return false; // default OFF — engine info is a hint
       return raw === "true";
-    } catch (e) { return true; }
+    } catch (e) { return false; }
   }
 
-  function saveShowArrows() {
-    try { localStorage.setItem(SHOW_ARROWS_KEY, String(showArrows)); } catch (e) {}
+  function saveShowEngine() {
+    try { localStorage.setItem(SHOW_ENGINE_KEY, String(showEngine)); } catch (e) {}
   }
 
   function shuffle(arr) {
@@ -1468,12 +1326,7 @@
     if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-    if (currentMode === "analysis") {
-      if (e.key === "ArrowLeft") { e.preventDefault(); analysisStepBack(); }
-      else if (e.key === "ArrowRight") { e.preventDefault(); analysisStepForward(); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); analysisJumpToStart(); }
-      else if (e.key === "ArrowDown") { e.preventDefault(); analysisJumpToEnd(); }
-    } else if (currentMode === "explore") {
+    if (currentMode === "explore") {
       if (e.key === "ArrowLeft") { e.preventDefault(); exploreStep(-1); }
       else if (e.key === "ArrowRight") { e.preventDefault(); exploreStep(1); }
       else if (e.key === "ArrowUp") { e.preventDefault(); exploreStep(-Infinity); }
