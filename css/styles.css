@@ -1053,3 +1053,14 @@ body {
   color: var(--text-dim);
   font-size: 13px;
 }
+
+/* Push the inline progress stats below the panel's visible fold so they
+   only appear when the user scrolls down (only meaningful at desktop sizes
+   where the right column is its own scroll area). */
+@media (min-width: 900px) {
+  .panel-practice {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+  }
+}

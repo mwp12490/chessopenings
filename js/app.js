@@ -591,7 +591,17 @@
     if (currentMode === "practice") {
       if (modeState.questionType === "setup") renderSetupPanel();
       else renderIdentifyPanel(isAfterAnswer);
+      // Wrap everything the practice render just produced into a single
+      // div so we can give it a min-height that fills the visible panel
+      // area. Stats rendered after the wrap end up below the fold.
+      const wrap = document.createElement("div");
+      wrap.className = "panel-practice";
+      while (panelEl.firstChild) wrap.appendChild(panelEl.firstChild);
+      panelEl.appendChild(wrap);
       appendInlineStats();
+      // Reset scroll to top on every new render so the user sees the
+      // question, not where they happened to leave the previous scroll.
+      panelEl.scrollTop = 0;
       return;
     }
     if (currentMode === "explore") return renderExplorePanel();
