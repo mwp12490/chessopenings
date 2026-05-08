@@ -546,6 +546,7 @@
       <div class="name"><span class="eco">${matched.eco}</span>${escapeHtml(matched.name)}</div>
       ${renderOpeningPillsHtml(matched)}
       <div class="desc">${escapeHtml(matched.description)}</div>
+      ${matched.assessment ? `<div class="assessment">${escapeHtml(matched.assessment)}</div>` : ""}
     `;
     const arrowsRow = panelEl.querySelector(".checkbox-row");
     if (arrowsRow) panelEl.insertBefore(om, arrowsRow);
@@ -644,7 +645,7 @@
     if (answered) {
       const fb = document.createElement("div");
       fb.className = "feedback info";
-      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco})${renderOpeningPillsHtml(opening, { includeEval: true })}${escapeHtml(opening.description)}<br/><br/><span style="color:var(--text-dim)">Moves: ${formatNumberedSan(opening.moves)}</span>`;
+      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco})${renderOpeningPillsHtml(opening, { includeEval: true })}${escapeHtml(opening.description)}${opening.assessment ? `<div class="assessment">${escapeHtml(opening.assessment)}</div>` : ""}<div class="moves-line">Moves: ${formatNumberedSan(opening.moves)}</div>`;
       panelEl.appendChild(fb);
       // Engine eval of the position after the opening's main line.
       try { fetchAndShowEval(fenFromMoves(opening.moves)); } catch (e) {}
@@ -712,6 +713,7 @@
       <div class="name"><span class="eco">${opening.eco}</span>${escapeHtml(opening.name)}</div>
       ${complete ? renderOpeningPillsHtml(opening, { includeEval: true }) : ""}
       ${complete ? `<div class="desc">${escapeHtml(opening.description)}</div>` : ""}
+      ${complete && opening.assessment ? `<div class="assessment">${escapeHtml(opening.assessment)}</div>` : ""}
       <div class="progress"><div style="width:${(moveIndex / opening.moves.length) * 100}%"></div></div>
     `;
     panelEl.appendChild(meta);
@@ -878,6 +880,7 @@
         <div class="name"><span class="eco">${matched.eco}</span>${escapeHtml(matched.name)}</div>
         ${renderOpeningPillsHtml(matched)}
         <div class="desc">${escapeHtml(matched.description)}</div>
+        ${matched.assessment ? `<div class="assessment">${escapeHtml(matched.assessment)}</div>` : ""}
       `;
       panelEl.appendChild(om);
     }
