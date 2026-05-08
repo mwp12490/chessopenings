@@ -1225,3 +1225,48 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.audience-tag.aud-intermediate {
+  background: rgba(245, 130, 65, 0.18);
+  color: #e8a070;
+  border-color: #8a5c2c;
+}
+
+.audience-filter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.audience-filter-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+.audience-filter-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.audience-filter-btn.active.aud-beginner {
+  background: rgba(76, 175, 80, 0.30);
+  color: #7fce85;
+  border-color: #3d7a40;
+}
+.audience-filter-btn.active.aud-intermediate {
+  background: rgba(245, 130, 65, 0.28);
+  color: #e8a070;
+  border-color: #8a5c2c;
+}
+.audience-filter-btn.active.aud-gm {
+  background: rgba(90, 169, 230, 0.28);
+  color: #7ab8e3;
+  border-color: #3a6b94;
+}

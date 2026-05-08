@@ -14,10 +14,12 @@
   const SCORE_GOAL_PCT = 80;
   const SHOW_ENGINE_KEY = "chess-openings-trainer.show-engine";
   const TIER_FILTER_KEY = "chess-openings-trainer.tier-filter";
+  const AUDIENCE_FILTER_KEY = "chess-openings-trainer.audience-filter";
   // Score is per-session — not persisted across launches.
   let score = { correct: 0, total: 0 };
   let showEngine = loadShowEngine();
   let tierFilter = loadTierFilter();
+  let audienceFilter = loadAudienceFilter();
   renderScore();
 
   validateOpenings();
@@ -749,6 +751,7 @@
       <div class="key-row"><span class="popularity-pill">★★☆☆</span> ${escapeHtml(POPULARITY_DESCS[2])}</div>
       <div class="key-row"><span class="popularity-pill">★☆☆☆</span> ${escapeHtml(POPULARITY_DESCS[1])}</div>
       <div class="key-row"><span class="audience-tag aud-beginner">Beginner</span> Beginner-friendly — clear plans, low risk of immediate disaster, easy to learn the typical structures.</div>
+      <div class="key-row"><span class="audience-tag aud-intermediate">Intermediate</span> Intermediate-friendly — sound theoretical foundations and manageable complexity for a player past the basics.</div>
       <div class="key-row"><span class="audience-tag aud-gm">GM</span> Played at the top level — regularly appears in modern grandmaster practice.</div>
       <div class="key-row"><span class="eval-pill eval-equal">+0.20</span> Stockfish's evaluation at depth 14 of the position after the opening's main line. Positive favors White; negative favors Black; ≈0 means the position is balanced.</div>
     `;
@@ -927,8 +930,10 @@
       if (modeState.questionType === "setup") renderSetupPanel();
       else if (modeState.questionType === "play" || modeState.questionType === "playmystery") renderPlayPanel();
       else renderIdentifyPanel(isAfterAnswer);
-      // Tier filter pinned at the top of the practice content so the user
-      // can change focus without leaving the page.
+      // Tier and audience filters pinned at the top of the practice content
+      // so the user can change focus without leaving the page.
+      const audienceEl = createAudienceFilter();
+      panelEl.insertBefore(audienceEl, panelEl.firstChild);
       const filterEl = createTierFilter();
       panelEl.insertBefore(filterEl, panelEl.firstChild);
 
@@ -1021,6 +1026,56 @@
     none.addEventListener("click", () => {
       tierFilter = new Set(["S"]);
       saveTierFilter();
+      renderPanel();
+    });
+    wrap.appendChild(none);
+    return wrap;
+  }
+
+  // Renders the audience-filter row (Beginner / Intermediate / GM).
+  // Empty selection means "no audience filter" (i.e. tier filter only).
+  function createAudienceFilter() {
+    const wrap = document.createElement("div");
+    wrap.className = "audience-filter";
+    const lbl = document.createElement("span");
+    lbl.className = "tier-filter-label";
+    lbl.textContent = "Audience:";
+    wrap.appendChild(lbl);
+    const types = [
+      { key: "beginner", label: "Beginner", cls: "aud-beginner" },
+      { key: "intermediate", label: "Intermediate", cls: "aud-intermediate" },
+      { key: "gm", label: "GM", cls: "aud-gm" }
+    ];
+    for (const t of types) {
+      const btn = document.createElement("button");
+      btn.className = "audience-filter-btn " + t.cls + (audienceFilter.has(t.key) ? " active" : "");
+      btn.dataset.audience = t.key;
+      btn.textContent = t.label;
+      btn.title = "Toggle " + t.label.toLowerCase() + "-friendly openings in the practice rotation";
+      btn.addEventListener("click", () => {
+        if (audienceFilter.has(t.key)) audienceFilter.delete(t.key);
+        else audienceFilter.add(t.key);
+        saveAudienceFilter();
+        renderPanel();
+      });
+      wrap.appendChild(btn);
+    }
+    const all = document.createElement("button");
+    all.className = "tier-filter-bulk";
+    all.textContent = "All";
+    all.addEventListener("click", () => {
+      audienceFilter = new Set(["beginner", "intermediate", "gm"]);
+      saveAudienceFilter();
+      renderPanel();
+    });
+    wrap.appendChild(all);
+    const none = document.createElement("button");
+    none.className = "tier-filter-bulk";
+    none.textContent = "None";
+    none.title = "Clear the audience filter (only the tier filter remains)";
+    none.addEventListener("click", () => {
+      audienceFilter = new Set();
+      saveAudienceFilter();
       renderPanel();
     });
     wrap.appendChild(none);
@@ -1610,6 +1665,9 @@
     const begTag = opening.beginnerFriendly
       ? `<span class="audience-tag aud-beginner" data-tip="Beginner-friendly — clear plans, low risk of immediate disaster, easy to learn the typical structures.">Beginner</span>`
       : "";
+    const intTag = opening.intermediateFriendly
+      ? `<span class="audience-tag aud-intermediate" data-tip="Intermediate-friendly — sound theoretical foundations and manageable complexity for a player past the basics.">Intermediate</span>`
+      : "";
     const gmTag = opening.gmFriendly
       ? `<span class="audience-tag aud-gm" data-tip="Played at the top level — regularly appears in modern grandmaster practice.">GM</span>`
       : "";
@@ -1619,6 +1677,7 @@
         <span class="tier-pill tier-${tier}" data-tip="${escapeHtml(tierInfo.label)} — ${escapeHtml(tierInfo.desc)}">${escapeHtml(tierInfo.label)}</span>
         <span class="popularity-pill" data-tip="${escapeHtml(popDesc)}">${stars}</span>
         ${begTag}
+        ${intTag}
         ${gmTag}
         ${evalSlot}
       </div>
@@ -1757,10 +1816,34 @@
     try { localStorage.setItem(TIER_FILTER_KEY, JSON.stringify([...tierFilter])); } catch (e) {}
   }
 
+  function loadAudienceFilter() {
+    try {
+      const raw = localStorage.getItem(AUDIENCE_FILTER_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length) return new Set(arr);
+      }
+    } catch (e) {}
+    return new Set(["beginner", "intermediate", "gm"]); // default: all audiences
+  }
+
+  function saveAudienceFilter() {
+    try { localStorage.setItem(AUDIENCE_FILTER_KEY, JSON.stringify([...audienceFilter])); } catch (e) {}
+  }
+
+  function openingMatchesAudience(o) {
+    if (audienceFilter.size === 0) return true;
+    if (audienceFilter.has("beginner") && o.beginnerFriendly) return true;
+    if (audienceFilter.has("intermediate") && o.intermediateFriendly) return true;
+    if (audienceFilter.has("gm") && o.gmFriendly) return true;
+    return false;
+  }
+
   function getFilteredOpeningPool() {
-    const filtered = OPENINGS.filter(o => tierFilter.has(o.tier || "C"));
-    // Defensive: if the filter ends up empty (shouldn't with the size>1 guard
-    // on the toggle, but localStorage tampering etc.), fall back to all.
+    const filtered = OPENINGS.filter(o =>
+      tierFilter.has(o.tier || "C") && openingMatchesAudience(o)
+    );
+    // Defensive: if the combined filter ends up empty, fall back to all.
     return filtered.length ? filtered : OPENINGS;
   }
 

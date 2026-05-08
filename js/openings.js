@@ -743,8 +743,11 @@ const POPULARITY_DESCS = {
 
 // "Audience" tags — patched onto each opening so renderers can show small
 // flags. Beginner-friendly = clear plans, low risk of immediate disaster,
-// easy to learn. GM-friendly = regularly appears in modern top-level games.
-// The two are independent: an opening can be both, neither, or one.
+// easy to learn. Intermediate-friendly = serious-study material for a
+// player past the basics; sound theoretical foundations, manageable
+// complexity. GM-friendly = regularly appears in modern top-level games.
+// The three are independent: an opening can be any combination, including
+// none (e.g. dubious sidelines).
 const BEGINNER_FRIENDLY_OPENINGS = new Set([
   "Italian Game", "Giuoco Piano", "Two Knights Defense", "Scotch Game",
   "Four Knights Game", "Vienna Game", "Bishop's Opening", "Petrov's Defense",
@@ -755,6 +758,30 @@ const BEGINNER_FRIENDLY_OPENINGS = new Set([
   "Queen's Gambit", "Queen's Gambit Accepted", "Queen's Gambit Declined",
   "Slav Defense", "London System", "Torre Attack", "Colle System",
   "King's Indian Attack"
+]);
+
+const INTERMEDIATE_FRIENDLY_OPENINGS = new Set([
+  // All S-tier
+  "Italian Game", "Ruy Lopez", "Sicilian Defense", "Sicilian Najdorf",
+  "French Defense", "Caro-Kann Defense", "Queen's Gambit",
+  "Queen's Gambit Declined", "Slav Defense", "King's Indian Defense",
+  "Nimzo-Indian Defense",
+  // All A-tier
+  "Berlin Defense", "Petrov's Defense", "Sicilian Dragon",
+  "Sicilian Sveshnikov", "Sicilian Scheveningen", "Sicilian Taimanov",
+  "Semi-Slav Defense", "Grünfeld Defense", "Queen's Indian Defense",
+  "Catalan Opening", "English Opening",
+  // All B-tier
+  "Giuoco Piano", "Two Knights Defense", "Scotch Game", "Sicilian Alapin",
+  "French Winawer", "French Tarrasch", "Caro-Kann Classical",
+  "Caro-Kann Advance", "Queen's Gambit Accepted", "London System",
+  "Trompowsky Attack", "Réti Opening",
+  // Selected C-tier (sound non-system mainlines worth studying)
+  "Sicilian Kan", "Accelerated Dragon", "Sicilian Closed",
+  "French Advance", "Panov-Botvinnik Attack", "Scandinavian Defense",
+  "Pirc Defense", "Modern Defense", "Alekhine's Defense",
+  "Bogo-Indian Defense", "Benoni Defense", "Modern Benoni",
+  "Benko Gambit", "Dutch Defense"
 ]);
 
 const GM_FRIENDLY_OPENINGS = new Set([
@@ -775,5 +802,6 @@ const GM_FRIENDLY_OPENINGS = new Set([
 
 for (const op of OPENINGS) {
   op.beginnerFriendly = BEGINNER_FRIENDLY_OPENINGS.has(op.name);
+  op.intermediateFriendly = INTERMEDIATE_FRIENDLY_OPENINGS.has(op.name);
   op.gmFriendly = GM_FRIENDLY_OPENINGS.has(op.name);
 }
