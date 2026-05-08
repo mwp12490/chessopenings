@@ -1163,3 +1163,47 @@ body {
   color: #7ab8e3;
   border-color: #3a6b94;
 }
+
+/* Tier filter row at the top of the Practice panel */
+.tier-filter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.tier-filter-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-right: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.tier-filter-btn {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 22px;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.tier-filter-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tier-filter-btn.active {
+  background: var(--accent);
+  color: #1a1a1a;
+  border-color: var(--accent);
+}
+.tier-filter-btn.active:hover {
+  filter: brightness(1.05);
+  color: #1a1a1a;
+}

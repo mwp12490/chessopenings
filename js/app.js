@@ -13,9 +13,11 @@
 
   const SCORE_GOAL_PCT = 80;
   const SHOW_ENGINE_KEY = "chess-openings-trainer.show-engine";
+  const TIER_FILTER_KEY = "chess-openings-trainer.tier-filter";
   // Score is per-session — not persisted across launches.
   let score = { correct: 0, total: 0 };
   let showEngine = loadShowEngine();
+  let tierFilter = loadTierFilter();
   renderScore();
 
   validateOpenings();
@@ -141,7 +143,7 @@
       return;
     }
     // Otherwise pick a new card from the SRS scheduler and append.
-    const opening = SRS.pickNext(OPENINGS);
+    const opening = SRS.pickNext(getFilteredOpeningPool());
     // Brand-new openings always start as identify so the user sees the
     // position before being asked to reproduce it from memory.
     const isNew = !SRS.getCard(opening.name);
@@ -357,7 +359,7 @@
         || (Math.random() < 0.5 ? "white" : "black");
       if (historyEntry) historyEntry.userSide = userSide;
       mysteryTarget = (historyEntry && historyEntry.mysteryTarget)
-        || pickWeightedRandomOpening(OPENINGS);
+        || pickWeightedRandomOpening(getFilteredOpeningPool());
       if (historyEntry) historyEntry.mysteryTarget = mysteryTarget;
     } else {
       userSide = openingSide(opening).toLowerCase();
@@ -887,6 +889,11 @@
       if (modeState.questionType === "setup") renderSetupPanel();
       else if (modeState.questionType === "play" || modeState.questionType === "playmystery") renderPlayPanel();
       else renderIdentifyPanel(isAfterAnswer);
+      // Tier filter pinned at the top of the practice content so the user
+      // can change focus without leaving the page.
+      const filterEl = createTierFilter();
+      panelEl.insertBefore(filterEl, panelEl.firstChild);
+
       // Engine analysis section (toggle + eval slot) is appended at the
       // bottom of the practice content, above the stats divider.
       appendEngineAnalysisSection();
@@ -928,6 +935,36 @@
     slot.className = "eval-slot";
     wrap.appendChild(slot);
     panelEl.appendChild(wrap);
+  }
+
+  // Renders the tier-filter row: a small inline group of S/A/B/C/D/F
+  // pill buttons. Clicking a tier toggles it in the practice rotation.
+  // The last enabled tier can't be turned off (would leave nothing to study).
+  function createTierFilter() {
+    const wrap = document.createElement("div");
+    wrap.className = "tier-filter";
+    const lbl = document.createElement("span");
+    lbl.className = "tier-filter-label";
+    lbl.textContent = "Study tiers:";
+    wrap.appendChild(lbl);
+    for (const t of ["S", "A", "B", "C", "D", "F"]) {
+      const btn = document.createElement("button");
+      btn.className = "tier-filter-btn" + (tierFilter.has(t) ? " active" : "");
+      btn.dataset.tier = t;
+      btn.textContent = t;
+      btn.title = "Toggle " + t + "-tier openings in the practice rotation";
+      btn.addEventListener("click", () => {
+        if (tierFilter.has(t)) {
+          if (tierFilter.size > 1) tierFilter.delete(t);
+        } else {
+          tierFilter.add(t);
+        }
+        saveTierFilter();
+        renderPanel();
+      });
+      wrap.appendChild(btn);
+    }
+    return wrap;
   }
 
   // Update the small engine toggle button in the board-controls row to
@@ -1622,6 +1659,28 @@
 
   function saveShowEngine() {
     try { localStorage.setItem(SHOW_ENGINE_KEY, String(showEngine)); } catch (e) {}
+  }
+
+  function loadTierFilter() {
+    try {
+      const raw = localStorage.getItem(TIER_FILTER_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length) return new Set(arr);
+      }
+    } catch (e) {}
+    return new Set(["S", "A", "B", "C", "D", "F"]); // default: all tiers
+  }
+
+  function saveTierFilter() {
+    try { localStorage.setItem(TIER_FILTER_KEY, JSON.stringify([...tierFilter])); } catch (e) {}
+  }
+
+  function getFilteredOpeningPool() {
+    const filtered = OPENINGS.filter(o => tierFilter.has(o.tier || "C"));
+    // Defensive: if the filter ends up empty (shouldn't with the size>1 guard
+    // on the toggle, but localStorage tampering etc.), fall back to all.
+    return filtered.length ? filtered : OPENINGS;
   }
 
   function shuffle(arr) {
