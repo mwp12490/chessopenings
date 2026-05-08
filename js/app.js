@@ -632,7 +632,8 @@
     if (answered) {
       const fb = document.createElement("div");
       fb.className = "feedback info";
-      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco}). ${escapeHtml(opening.description)}<br/><br/><span style="color:var(--text-dim)">Moves: ${formatNumberedSan(opening.moves)}</span>`;
+      const side = openingSide(opening);
+      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco}) <span class="side-tag side-${side.toLowerCase()}">${side}'s opening</span><br/>${escapeHtml(opening.description)}<br/><br/><span style="color:var(--text-dim)">Moves: ${formatNumberedSan(opening.moves)}</span>`;
       panelEl.appendChild(fb);
 
       const actions = document.createElement("div");
@@ -691,11 +692,12 @@
 
     const meta = document.createElement("div");
     meta.className = "opening-meta";
-    // Description can mention specific squares (e.g. "the bishop on c4
-    // targets f7") — those are hints when the user is trying to play
-    // the opening from memory. Hide it until they're done.
+    // Description and side can mention specific squares / hints, so they're
+    // gated behind completion — hidden during the question, revealed when
+    // the user finishes (or hits "Show solution").
+    const side = openingSide(opening);
     meta.innerHTML = `
-      <div class="name"><span class="eco">${opening.eco}</span>${escapeHtml(opening.name)}</div>
+      <div class="name"><span class="eco">${opening.eco}</span>${escapeHtml(opening.name)}${complete ? ` <span class="side-tag side-${side.toLowerCase()}">${side}'s opening</span>` : ""}</div>
       ${complete ? `<div class="desc">${escapeHtml(opening.description)}</div>` : ""}
       <div class="progress"><div style="width:${(moveIndex / opening.moves.length) * 100}%"></div></div>
     `;
@@ -983,6 +985,14 @@
   }
 
   // ===== Helpers =====
+  // Returns "White" or "Black" based on whose move ends the opening's main
+  // line (odd-length sequences end on White's move, even-length on Black's).
+  // This catches the usual convention — "Italian Game" is White's, "Sicilian
+  // Najdorf" / "King's Indian Defense" are Black's responses.
+  function openingSide(opening) {
+    return (opening.moves.length % 2 === 1) ? "White" : "Black";
+  }
+
   // Find the longest known opening whose moves match a prefix of the played
   // game. Returns the opening object, or null if no match.
   function findMatchingOpening() {
