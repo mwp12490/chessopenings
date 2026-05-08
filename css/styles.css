@@ -890,18 +890,34 @@ body {
   letter-spacing: 0.02em;
 }
 
-.tier-pill.tier-mainline {
-  background: rgba(76, 175, 80, 0.18);
+.tier-pill.tier-S {
+  background: rgba(245, 176, 65, 0.32);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.tier-pill.tier-A {
+  background: rgba(76, 175, 80, 0.22);
   color: #7fce85;
   border-color: #3d7a40;
 }
-.tier-pill.tier-solid {
-  background: rgba(245, 176, 65, 0.18);
-  color: var(--accent);
-  border-color: var(--accent-dim);
+.tier-pill.tier-B {
+  background: rgba(140, 200, 80, 0.18);
+  color: #b8d870;
+  border-color: #5a7d2c;
 }
-.tier-pill.tier-sideline {
-  background: rgba(231, 76, 60, 0.18);
+.tier-pill.tier-C {
+  background: rgba(245, 220, 65, 0.16);
+  color: #d8c860;
+  border-color: #8a7c2c;
+}
+.tier-pill.tier-D {
+  background: rgba(245, 130, 65, 0.20);
+  color: #e8a070;
+  border-color: #8a5c2c;
+}
+.tier-pill.tier-F {
+  background: rgba(231, 76, 60, 0.25);
   color: #ee8c80;
   border-color: #883a32;
 }

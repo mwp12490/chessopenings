@@ -347,9 +347,12 @@
         Hover any pill in the Practice or Analysis panels for the explanation; this
         section is the at-a-glance reference.
       </div>
-      <div class="key-row"><span class="tier-pill tier-mainline">Mainline</span> ${escapeHtml(TIER_INFO.mainline.desc)}</div>
-      <div class="key-row"><span class="tier-pill tier-solid">Solid</span> ${escapeHtml(TIER_INFO.solid.desc)}</div>
-      <div class="key-row"><span class="tier-pill tier-sideline">Sideline</span> ${escapeHtml(TIER_INFO.sideline.desc)}</div>
+      <div class="key-row"><span class="tier-pill tier-S">S</span> ${escapeHtml(TIER_INFO.S.desc)}</div>
+      <div class="key-row"><span class="tier-pill tier-A">A</span> ${escapeHtml(TIER_INFO.A.desc)}</div>
+      <div class="key-row"><span class="tier-pill tier-B">B</span> ${escapeHtml(TIER_INFO.B.desc)}</div>
+      <div class="key-row"><span class="tier-pill tier-C">C</span> ${escapeHtml(TIER_INFO.C.desc)}</div>
+      <div class="key-row"><span class="tier-pill tier-D">D</span> ${escapeHtml(TIER_INFO.D.desc)}</div>
+      <div class="key-row"><span class="tier-pill tier-F">F</span> ${escapeHtml(TIER_INFO.F.desc)}</div>
       <div class="key-row"><span class="popularity-pill">★★★★</span> ${escapeHtml(POPULARITY_DESCS[4])}</div>
       <div class="key-row"><span class="popularity-pill">★★★☆</span> ${escapeHtml(POPULARITY_DESCS[3])}</div>
       <div class="key-row"><span class="popularity-pill">★★☆☆</span> ${escapeHtml(POPULARITY_DESCS[2])}</div>
@@ -1019,7 +1022,7 @@
   // the rest of the meta block.
   function renderOpeningPillsHtml(opening, opts = {}) {
     const side = openingSide(opening);
-    const tier = opening.tier || "solid";
+    const tier = opening.tier || "C";
     const tierInfo = TIER_INFO[tier] || { label: tier, desc: "" };
     const pop = Math.max(1, Math.min(4, opening.popularity || 2));
     const stars = "★".repeat(pop) + "☆".repeat(4 - pop);
