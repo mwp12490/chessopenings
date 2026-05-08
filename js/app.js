@@ -366,7 +366,30 @@
     panelEl.appendChild(renderForecast(fc));
     panelEl.appendChild(renderEcoBreakdown(eco));
     panelEl.appendChild(renderHardest(hardest));
+    panelEl.appendChild(renderPillKey());
     panelEl.appendChild(renderEcoKey());
+  }
+
+  function renderPillKey() {
+    const wrap = document.createElement("div");
+    wrap.className = "stats-block";
+    wrap.innerHTML = `
+      <div class="stats-h3">Opening pill key</div>
+      <div class="subtitle" style="margin-bottom:10px">
+        Three small pills appear next to each opening's name once you've answered.
+        Hover any pill in the Practice or Analysis panels for the explanation; this
+        section is the at-a-glance reference.
+      </div>
+      <div class="key-row"><span class="tier-pill tier-mainline">Mainline</span> ${escapeHtml(TIER_INFO.mainline.desc)}</div>
+      <div class="key-row"><span class="tier-pill tier-solid">Solid</span> ${escapeHtml(TIER_INFO.solid.desc)}</div>
+      <div class="key-row"><span class="tier-pill tier-sideline">Sideline</span> ${escapeHtml(TIER_INFO.sideline.desc)}</div>
+      <div class="key-row"><span class="popularity-pill">★★★★</span> ${escapeHtml(POPULARITY_DESCS[4])}</div>
+      <div class="key-row"><span class="popularity-pill">★★★☆</span> ${escapeHtml(POPULARITY_DESCS[3])}</div>
+      <div class="key-row"><span class="popularity-pill">★★☆☆</span> ${escapeHtml(POPULARITY_DESCS[2])}</div>
+      <div class="key-row"><span class="popularity-pill">★☆☆☆</span> ${escapeHtml(POPULARITY_DESCS[1])}</div>
+      <div class="key-row"><span class="eval-pill eval-equal">+0.20</span> Stockfish's evaluation at depth 14 of the position after the opening's main line. Positive favors White; negative favors Black; ≈0 means the position is balanced.</div>
+    `;
+    return wrap;
   }
 
   function renderEcoKey() {
@@ -1009,15 +1032,15 @@
     const tierInfo = TIER_INFO[tier] || { label: tier, desc: "" };
     const pop = Math.max(1, Math.min(4, opening.popularity || 2));
     const stars = "★".repeat(pop) + "☆".repeat(4 - pop);
-    const popLabel = POPULARITY_LABELS[pop] || "";
+    const popDesc = POPULARITY_DESCS[pop] || "";
     const evalSlot = opts.includeEval
-      ? `<span class="eval-pill" data-eval-pill title="Stockfish eval of the position after the opening's main line">eval …</span>`
+      ? `<span class="eval-pill" data-eval-pill data-tip="Stockfish evaluation of the resulting position at depth 14.\nPositive favors White, negative favors Black.">eval …</span>`
       : "";
     return `
       <div class="opening-pills">
-        <span class="side-tag side-${side.toLowerCase()}">${side}</span>
-        <span class="tier-pill tier-${tier}" title="${escapeHtml(tierInfo.desc)}">${escapeHtml(tierInfo.label)}</span>
-        <span class="popularity-pill" title="${escapeHtml(popLabel)} at master level">${stars}</span>
+        <span class="side-tag side-${side.toLowerCase()}" data-tip="${escapeHtml(side)}'s opening — the main line ends on ${escapeHtml(side)}'s move.">${side}</span>
+        <span class="tier-pill tier-${tier}" data-tip="${escapeHtml(tierInfo.label)} — ${escapeHtml(tierInfo.desc)}">${escapeHtml(tierInfo.label)}</span>
+        <span class="popularity-pill" data-tip="${escapeHtml(popDesc)}">${stars}</span>
         ${evalSlot}
       </div>
     `;

@@ -620,9 +620,18 @@ function validateOpenings() {
 }
 
 const TIER_INFO = {
-  mainline: { label: "Mainline", desc: "Sound, played at every level." },
-  solid:    { label: "Solid",    desc: "Sound but less ambitious or less common." },
-  sideline: { label: "Sideline", desc: "Surprise weapon; risky / dubious at master level." }
+  mainline: {
+    label: "Mainline",
+    desc: "Sound and popular at every level — the bread-and-butter of opening theory. Worth grinding into long-term memory."
+  },
+  solid: {
+    label: "Solid",
+    desc: "Theoretically respectable but quieter or less ambitious than the mainstream. A reliable choice that won't get refuted."
+  },
+  sideline: {
+    label: "Sideline",
+    desc: "Surprise weapon. Sound enough at club level but considered dubious or refutable at master level. Use sparingly, or for fun."
+  }
 };
 
 const POPULARITY_LABELS = {
@@ -630,4 +639,11 @@ const POPULARITY_LABELS = {
   2: "Uncommon",
   3: "Common",
   4: "Very common"
+};
+
+const POPULARITY_DESCS = {
+  1: "Rare — surprise value only, almost never played at the top level.",
+  2: "Uncommon — appears occasionally in master games.",
+  3: "Common — regularly seen at the top level.",
+  4: "Very common — a top-frequency choice in master practice."
 };
