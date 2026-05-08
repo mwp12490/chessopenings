@@ -151,8 +151,13 @@
   function loadIdentifyCard(opening, historyEntry) {
     const fen = fenFromMoves(opening.moves);
     game.load(fen);
-    // Keep the orientation as White by default
-    if (board.orientation !== "white") board.setOrientation("white");
+    // Random board orientation per card so the user sees positions from
+    // both sides over time. Stored on the history entry so re-visits keep
+    // the same view.
+    const orientation = (historyEntry && historyEntry.orientation)
+      || (Math.random() < 0.5 ? "white" : "black");
+    if (historyEntry) historyEntry.orientation = orientation;
+    if (board.orientation !== orientation) board.setOrientation(orientation);
     board.setPosition(game.board(), null);
     updateTurnIndicator();
 
@@ -215,7 +220,10 @@
 
   function loadSetupCard(opening, historyEntry) {
     game.reset();
-    board.setOrientation("white");
+    const orientation = (historyEntry && historyEntry.orientation)
+      || (Math.random() < 0.5 ? "white" : "black");
+    if (historyEntry) historyEntry.orientation = orientation;
+    board.setOrientation(orientation);
     board.setPosition(game.board(), null);
     modeState = {
       questionType: "setup",
