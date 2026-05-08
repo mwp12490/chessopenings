@@ -24,6 +24,24 @@
   const board = new ChessBoard(boardEl, {
     onMoveAttempt: handleMoveAttempt,
     legalSquaresFor: (square) => {
+      // In Practice post-reveal we allow free play with either color, so
+      // the legal-square highlight should match whichever side the piece
+      // on `square` belongs to — even when chess.js thinks it's the other
+      // side's turn.
+      if (currentMode === "practice" && isQuestionRevealed()) {
+        const piece = game.get(square);
+        if (!piece) return [];
+        if (piece.color !== game.turn()) {
+          const parts = game.fen().split(" ");
+          parts[1] = piece.color;
+          parts[3] = "-";
+          const probe = new Chess();
+          if (probe.load(parts.join(" "))) {
+            return probe.moves({ square, verbose: true }).map(m => m.to);
+          }
+          return [];
+        }
+      }
       const moves = game.moves({ square, verbose: true });
       return moves.map(m => m.to);
     }
@@ -827,8 +845,22 @@
   // Post-completion free play: any legal move is accepted so the user can
   // explore continuations from the resulting position. Triggers engine
   // analysis immediately (eval section is already auto-rendered post-reveal).
+  // If the user picks up a piece that belongs to the side whose turn it
+  // ISN'T, we flip chess.js's active color so the move can land — otherwise
+  // chess.js rejects opposite-color moves and "free play" doesn't feel free.
   function handleFreeMoveAttempt({ from, to }) {
-    const m = game.move({ from, to, promotion: "q" });
+    let m = game.move({ from, to, promotion: "q" });
+    if (!m) {
+      const piece = game.get(from);
+      if (piece && piece.color !== game.turn()) {
+        const parts = game.fen().split(" ");
+        parts[1] = piece.color;
+        parts[3] = "-"; // stale en-passant target after the flip
+        if (game.load(parts.join(" "))) {
+          m = game.move({ from, to, promotion: "q" });
+        }
+      }
+    }
     if (!m) return false;
     modeState.lastMove = { from: m.from, to: m.to };
     board.setPosition(game.board(), modeState.lastMove);
