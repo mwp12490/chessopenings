@@ -140,8 +140,24 @@
     }
     overlayEl.classList.add("hidden");
     modeState = {};
+    renderFilterBar();
     if (mode === "practice") startPractice();
     else if (mode === "explore") startExplore();
+  }
+
+  // Filter bar (tier + audience pills) lives in its own strip directly
+  // below the topbar — only visible in Practice mode.
+  function renderFilterBar() {
+    const bar = document.getElementById("filterbar");
+    if (!bar) return;
+    bar.innerHTML = "";
+    if (currentMode !== "practice") {
+      bar.classList.add("hidden");
+      return;
+    }
+    bar.classList.remove("hidden");
+    bar.appendChild(createTierFilter());
+    bar.appendChild(createAudienceFilter());
   }
 
   // ===== Practice Mode (mixed identify + setup) =====
@@ -949,17 +965,14 @@
       if (modeState.questionType === "setup") renderSetupPanel();
       else if (modeState.questionType === "play" || modeState.questionType === "playmystery") renderPlayPanel();
       else renderIdentifyPanel(isAfterAnswer);
-      // Tier and audience filters pinned at the top of the practice content
-      // so the user can change focus without leaving the page.
-      const audienceEl = createAudienceFilter();
-      panelEl.insertBefore(audienceEl, panelEl.firstChild);
-      const filterEl = createTierFilter();
-      panelEl.insertBefore(filterEl, panelEl.firstChild);
+      // Tier and audience filters now live in the topbar filter strip
+      // (renderFilterBar), not inside the right panel.
 
-      // Move the navigation actions row (Previous / Skip / Next / Try-playing /
-      // Hint / Show solution) above the filters so it always lives in the same
-      // position regardless of what's revealed below — without this it kept
-      // shifting depending on whether feedback / move list / etc. were rendered.
+      // Pin the navigation actions row (Previous / Skip / Next / Try-playing /
+      // Hint / Show solution) at the top of the panel so it always lives in
+      // the same position regardless of what's revealed below — without this
+      // it kept shifting depending on whether feedback / move list / etc. were
+      // rendered.
       const actionsEl = panelEl.querySelector(".actions");
       if (actionsEl) panelEl.insertBefore(actionsEl, panelEl.firstChild);
 
@@ -1029,6 +1042,7 @@
           tierFilter.add(t);
         }
         saveTierFilter();
+        renderFilterBar();
         renderPanel();
       });
       wrap.appendChild(btn);
@@ -1042,6 +1056,7 @@
     all.addEventListener("click", () => {
       tierFilter = new Set(["S", "A", "B", "C", "D", "F"]);
       saveTierFilter();
+      renderFilterBar();
       renderPanel();
     });
     wrap.appendChild(all);
@@ -1052,6 +1067,7 @@
     none.addEventListener("click", () => {
       tierFilter = new Set(["S"]);
       saveTierFilter();
+      renderFilterBar();
       renderPanel();
     });
     wrap.appendChild(none);
@@ -1082,6 +1098,7 @@
         if (audienceFilter.has(t.key)) audienceFilter.delete(t.key);
         else audienceFilter.add(t.key);
         saveAudienceFilter();
+        renderFilterBar();
         renderPanel();
       });
       wrap.appendChild(btn);
@@ -1092,6 +1109,7 @@
     all.addEventListener("click", () => {
       audienceFilter = new Set(["beginner", "intermediate", "gm"]);
       saveAudienceFilter();
+      renderFilterBar();
       renderPanel();
     });
     wrap.appendChild(all);
@@ -1102,6 +1120,7 @@
     none.addEventListener("click", () => {
       audienceFilter = new Set();
       saveAudienceFilter();
+      renderFilterBar();
       renderPanel();
     });
     wrap.appendChild(none);

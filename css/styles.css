@@ -1164,7 +1164,25 @@ body {
   border-color: #3a6b94;
 }
 
-/* Tier filter row at the top of the Practice panel */
+/* Filter bar lives directly below the topbar — holds the tier + audience
+   filters so they don't take up real estate in the right-hand panel.
+   Hidden when not in Practice mode. */
+.filterbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 8px 20px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+.filterbar.hidden { display: none; }
+.filterbar .tier-filter,
+.filterbar .audience-filter {
+  margin-bottom: 0;
+}
+
+/* Tier filter row */
 .tier-filter {
   display: flex;
   align-items: center;
