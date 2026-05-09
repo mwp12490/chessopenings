@@ -145,6 +145,31 @@
     else if (mode === "explore") startExplore();
   }
 
+  // Called after the user toggles a tier or audience filter. If the card
+  // currently on screen no longer matches the new filter, advance to a fresh
+  // pick so the user immediately sees the effect of their change. Otherwise
+  // just re-render the panel (so things like distractor lists refresh).
+  function applyFilterChange() {
+    if (currentMode !== "practice") {
+      renderPanel();
+      return;
+    }
+    const op = modeState && modeState.opening;
+    if (op) {
+      const pool = getFilteredOpeningPool();
+      const stillMatches = pool.some(o => o.name === op.name);
+      if (!stillMatches) {
+        // Park historyIndex at the head so nextPracticeQuestion picks a
+        // fresh card rather than walking forward into a stale history entry
+        // that might also fail the new filter.
+        historyIndex = questionHistory.length - 1;
+        nextPracticeQuestion();
+        return;
+      }
+    }
+    renderPanel();
+  }
+
   // Filter bar (tier + audience pills) lives in its own strip directly
   // below the topbar — only visible in Practice mode.
   function renderFilterBar() {
@@ -1106,7 +1131,7 @@
         }
         saveTierFilter();
         renderFilterBar();
-        renderPanel();
+        applyFilterChange();
       });
       wrap.appendChild(btn);
     }
@@ -1120,7 +1145,7 @@
       tierFilter = new Set(["S", "A", "B", "C", "D", "F"]);
       saveTierFilter();
       renderFilterBar();
-      renderPanel();
+      applyFilterChange();
     });
     wrap.appendChild(all);
     const none = document.createElement("button");
@@ -1131,7 +1156,7 @@
       tierFilter = new Set(["S"]);
       saveTierFilter();
       renderFilterBar();
-      renderPanel();
+      applyFilterChange();
     });
     wrap.appendChild(none);
     return wrap;
@@ -1162,7 +1187,7 @@
         else audienceFilter.add(t.key);
         saveAudienceFilter();
         renderFilterBar();
-        renderPanel();
+        applyFilterChange();
       });
       wrap.appendChild(btn);
     }
@@ -1173,7 +1198,7 @@
       audienceFilter = new Set(["beginner", "intermediate", "gm"]);
       saveAudienceFilter();
       renderFilterBar();
-      renderPanel();
+      applyFilterChange();
     });
     wrap.appendChild(all);
     const none = document.createElement("button");
@@ -1184,7 +1209,7 @@
       audienceFilter = new Set();
       saveAudienceFilter();
       renderFilterBar();
-      renderPanel();
+      applyFilterChange();
     });
     wrap.appendChild(none);
     return wrap;
