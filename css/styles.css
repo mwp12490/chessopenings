@@ -1327,6 +1327,15 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+.continuation-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1a1a;
+}
+.continuation-pill.active:hover {
+  filter: brightness(1.05);
+  color: #1a1a1a;
+}
 .continuation-pill .eco {
   font-size: 10px;
   color: var(--text-dim);
@@ -1335,6 +1344,10 @@ body {
 }
 .continuation-pill:hover .eco {
   color: var(--accent);
+}
+.continuation-pill.active .eco,
+.continuation-pill.active:hover .eco {
+  color: rgba(26, 26, 26, 0.7);
 }
 
 .acc-bar {

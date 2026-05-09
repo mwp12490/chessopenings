@@ -492,40 +492,46 @@
     return out.slice(0, limit || 8);
   }
 
-  // Renders the "Continues into:" pill list. Empty string when no continuations
-  // (for openings at the leaf of their line). Each pill is a button with a
-  // data-continuation-name attribute the panel-level delegated click handler
-  // picks up.
+  // Renders the "Continues into" pill list. Includes the answered opening
+  // itself as the first pill (highlighted) so the user can return to it
+  // after browsing continuations. Empty when nothing extends past the
+  // current line. Pills are buttons with data-continuation-name; a single
+  // delegated click handler on panelEl handles the navigation.
   function renderContinuationsHtml(opening) {
     const conts = findContinuationOpenings(opening);
     if (!conts.length) return "";
-    const items = conts.map(op => `
-      <button class="continuation-pill" data-continuation-name="${escapeHtml(op.name)}" title="Study ${escapeHtml(op.name)} next">
+    const all = [opening, ...conts];
+    const items = all.map((op, i) => `
+      <button class="continuation-pill${i === 0 ? " active" : ""}" data-continuation-name="${escapeHtml(op.name)}" title="Show ${escapeHtml(op.name)} on the board">
         <span class="eco">${escapeHtml(op.eco || "")}</span>${escapeHtml(op.name)}
       </button>
     `).join("");
     return `
       <div class="continuations">
-        <div class="continuations-label">Continues into</div>
+        <div class="continuations-label">Click to view position</div>
         <div class="continuations-list">${items}</div>
       </div>
     `;
   }
 
-  // Switch the practice card to a specific opening (used by continuation
-  // pills). Loads it as an identify card so the user immediately sees the
-  // resulting position.
-  function loadContinuationByName(name) {
+  // Load `name`'s book-line position onto the board without changing the
+  // current SRS card. Used by the continuation pills so the user can browse
+  // related lines after revealing a card. Highlights the active pill.
+  function previewOpeningPosition(name) {
     const op = OPENINGS.find(o => o.name === name);
     if (!op) return;
-    const entry = { opening: op, questionType: "identify", graded: false };
-    questionHistory.push(entry);
-    historyIndex = questionHistory.length - 1;
-    if (questionHistory.length > MAX_HISTORY) {
-      questionHistory.shift();
-      historyIndex--;
-    }
-    loadHistoryEntry(entry);
+    let fen;
+    try { fen = fenFromMoves(op.moves); } catch (e) { return; }
+    game.load(fen);
+    board.setPosition(game.board(), null);
+    updateTurnIndicator();
+    // Re-trigger engine analysis on the new position so the eval bar /
+    // best-move arrow follow the user's browsing.
+    if (showEngine || isQuestionRevealed()) triggerAnalysis();
+    // Highlight whichever pill matches the position now on the board.
+    panelEl.querySelectorAll(".continuation-pill").forEach(p => {
+      p.classList.toggle("active", p.dataset.continuationName === name);
+    });
   }
 
   // Delegated click handler for continuation pills — one listener at the
@@ -534,7 +540,7 @@
     const btn = e.target.closest(".continuation-pill");
     if (!btn) return;
     const name = btn.dataset.continuationName;
-    if (name) loadContinuationByName(name);
+    if (name) previewOpeningPosition(name);
   });
 
   function handlePlayMoveAttempt({ from, to }) {
