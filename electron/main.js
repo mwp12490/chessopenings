@@ -1,5 +1,5 @@
 // Electron main process: opens a BrowserWindow that loads the static app.
-const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog, protocol } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const fsp = fs.promises;
@@ -8,6 +8,110 @@ const https = require("https");
 const { spawn, exec } = require("child_process");
 
 let mainWindow = null;
+
+// We serve the app under a custom "app://" scheme so the renderer is
+// cross-origin isolated (COOP/COEP), which lets the multi-threaded
+// Stockfish 16 NNUE WASM use SharedArrayBuffer for its pthread workers.
+// The same scheme also acts like a normal HTTP origin for fetch() and
+// dynamic imports — file:// has restrictions that break both.
+protocol.registerSchemesAsPrivileged([{
+  scheme: "app",
+  privileges: {
+    standard: true,
+    secure: true,
+    supportFetchAPI: true,
+    corsEnabled: true,
+    stream: true,
+    bypassCSP: false
+  }
+}]);
+
+const APP_ROOT = path.join(__dirname, "..");
+const MIME_TYPES = {
+  ".html": "text/html",
+  ".css": "text/css",
+  ".js": "text/javascript",
+  ".mjs": "text/javascript",
+  ".json": "application/json",
+  ".wasm": "application/wasm",
+  ".nnue": "application/octet-stream",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2"
+};
+
+async function migrateLegacyLocalStorage() {
+  const userData = app.getPath("userData");
+  const marker = path.join(userData, "legacy-storage-migrated.flag");
+  const dump = path.join(userData, "legacy-storage.json");
+  try { await fsp.access(marker); return; } catch (_) { /* not yet migrated */ }
+  await fsp.mkdir(userData, { recursive: true });
+
+  const indexPath = path.join(APP_ROOT, "index.html");
+  try { await fsp.access(indexPath); } catch (_) {
+    await fsp.writeFile(marker, "no-index");
+    return;
+  }
+
+  const hidden = new BrowserWindow({
+    show: false,
+    width: 100,
+    height: 100,
+    webPreferences: {
+      contextIsolation: false,
+      nodeIntegration: false,
+      sandbox: false,
+      offscreen: true
+    }
+  });
+
+  // Don't let a misbehaving page hang first launch — cap the migration at
+  // 10 seconds. We still write the marker afterwards so we don't retry.
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Legacy migration timeout")), 10000)
+  );
+  const work = (async () => {
+    // ?migration=1 lets app.js know it's just being loaded for a one-shot
+    // localStorage capture and shouldn't run its full init.
+    await hidden.loadFile(indexPath, { search: "migration=1" });
+    const data = await hidden.webContents.executeJavaScript(`
+      (() => {
+        const out = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          out[k] = localStorage.getItem(k);
+        }
+        return out;
+      })()
+    `, true);
+    if (data && Object.keys(data).length > 0) {
+      await fsp.writeFile(dump, JSON.stringify(data));
+    }
+  })();
+
+  try {
+    await Promise.race([work, timeout]);
+  } finally {
+    if (!hidden.isDestroyed()) hidden.destroy();
+    await fsp.writeFile(marker, "done").catch(() => {});
+  }
+}
+
+ipcMain.handle("legacy:read", async () => {
+  const dump = path.join(app.getPath("userData"), "legacy-storage.json");
+  try {
+    const raw = await fsp.readFile(dump, "utf8");
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+});
+
+ipcMain.handle("legacy:clear", async () => {
+  const dump = path.join(app.getPath("userData"), "legacy-storage.json");
+  await fsp.unlink(dump).catch(() => {});
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -25,7 +129,7 @@ function createWindow() {
     }
   });
 
-  win.loadFile(path.join(__dirname, "..", "index.html"));
+  win.loadURL("app://./index.html");
 
   // Open external links in the system browser instead of inside the app.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -36,7 +140,45 @@ function createWindow() {
   mainWindow = win;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Serve files from APP_ROOT with COOP/COEP headers so the renderer is
+  // cross-origin isolated — required for SharedArrayBuffer / threaded WASM.
+  // COEP=credentialless lets the page still fetch external no-credentials
+  // resources (e.g. the GitHub API for update checks) without needing each
+  // server to opt in via Cross-Origin-Resource-Policy.
+  protocol.handle("app", async (request) => {
+    try {
+      const u = new URL(request.url);
+      const rel = decodeURIComponent(u.pathname.replace(/^\//, "")) || "index.html";
+      const filePath = path.normalize(path.join(APP_ROOT, rel));
+      if (!filePath.startsWith(APP_ROOT)) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      const data = await fsp.readFile(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      const headers = {
+        "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "credentialless",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Cache-Control": "no-cache"
+      };
+      return new Response(data, { status: 200, headers });
+    } catch (e) {
+      return new Response("Not found", { status: 404 });
+    }
+  });
+
+  // One-time migration: previous versions loaded the app via file://, which
+  // gave it a different origin from the new app:// scheme — so localStorage
+  // (SRS state, sync folder, filters) would otherwise be inaccessible. We
+  // briefly load the same index.html under file:// in a hidden window,
+  // copy its localStorage to disk, and have the renderer pull it on first
+  // launch. Skipped on subsequent runs via a marker file.
+  await migrateLegacyLocalStorage().catch((e) => {
+    console.warn("Legacy localStorage migration skipped:", e);
+  });
+
   createWindow();
 
   // macOS: re-create a window when the dock icon is clicked and no windows are open.

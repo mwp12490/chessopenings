@@ -2,7 +2,35 @@
 // Wires the chess.js game state, the visual board, the openings database,
 // and the Stockfish engine into four modes: identify, setup, explore, analysis.
 
-(() => {
+(async () => {
+  // Hidden file:// migration window: only here to dump localStorage. Bail
+  // out so we don't spin up the engine, board, etc. for a throwaway run.
+  if (typeof window !== "undefined" && window.location && window.location.search.includes("migration=1")) {
+    return;
+  }
+
+  // One-time pull of localStorage from the previous file:// origin — see
+  // the "legacy:read" IPC handler in main.js. Runs before any of this
+  // file's localStorage reads so the loaded keys are picked up below.
+  const LEGACY_MIGRATED_KEY = "chess-openings-trainer.migrated-legacy";
+  if (window.legacyMigration && localStorage.getItem(LEGACY_MIGRATED_KEY) !== "1") {
+    try {
+      const data = await window.legacyMigration.read();
+      if (data && typeof data === "object") {
+        for (const [k, v] of Object.entries(data)) {
+          if (k === LEGACY_MIGRATED_KEY) continue;
+          if (localStorage.getItem(k) == null && typeof v === "string") {
+            localStorage.setItem(k, v);
+          }
+        }
+        await window.legacyMigration.clear();
+      }
+      localStorage.setItem(LEGACY_MIGRATED_KEY, "1");
+    } catch (e) {
+      console.warn("Legacy migration apply failed:", e);
+    }
+  }
+
   const boardEl = document.getElementById("board");
   const overlayEl = document.getElementById("board-overlay");
   const panelEl = document.getElementById("panel");

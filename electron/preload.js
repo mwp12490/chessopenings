@@ -19,3 +19,11 @@ contextBridge.exposeInMainWorld("syncFs", {
   read: (folder) => ipcRenderer.invoke("sync:read", folder),
   write: (folder, content) => ipcRenderer.invoke("sync:write", folder, content)
 });
+
+// One-time migration of localStorage from the old file:// origin to the
+// new app:// origin. The renderer reads the dump and applies it locally
+// on first launch.
+contextBridge.exposeInMainWorld("legacyMigration", {
+  read: () => ipcRenderer.invoke("legacy:read"),
+  clear: () => ipcRenderer.invoke("legacy:clear")
+});

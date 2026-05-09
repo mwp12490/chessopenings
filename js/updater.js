@@ -3,6 +3,12 @@
 // falls back to opening the release page in the browser.
 
 (() => {
+  // Skip the update check during the legacy-storage migration window —
+  // this script is loaded under file:// once at first launch just to
+  // capture localStorage, and a GitHub fetch from there is wasted.
+  if (typeof window !== "undefined" && window.location && window.location.search.includes("migration=1")) {
+    return;
+  }
   const banner = document.getElementById("update-banner");
   const label = document.getElementById("update-label");
   const dismiss = document.getElementById("update-dismiss");
