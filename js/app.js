@@ -954,6 +954,7 @@
       wrap.className = "panel-practice";
       while (panelEl.firstChild) wrap.appendChild(panelEl.firstChild);
       panelEl.appendChild(wrap);
+      appendSyncSection();
       appendInlineStats();
       // Reset scroll to top on every new render so the user sees the
       // question, not where they happened to leave the previous scroll.
@@ -1136,9 +1137,17 @@
     panelEl.appendChild(renderEcoBreakdown(eco));
     panelEl.appendChild(renderHardest(hardest));
     panelEl.appendChild(renderPerOpening(perOp));
-    panelEl.appendChild(renderProgressSync());
     panelEl.appendChild(renderPillKey());
     panelEl.appendChild(renderEcoKey());
+  }
+
+  // Sync controls live in their own section, separate from progress stats.
+  function appendSyncSection() {
+    const sep = document.createElement("div");
+    sep.className = "stats-divider";
+    sep.innerHTML = `<span>Settings &amp; sync</span>`;
+    panelEl.appendChild(sep);
+    panelEl.appendChild(renderProgressSync());
   }
 
   // Persisted-state keys we round-trip in the JSON export — SRS data plus
@@ -1342,20 +1351,28 @@
 
   function renderProgressSync() {
     const folder = localStorage.getItem(SYNC_FOLDER_KEY) || "";
+    const lastTs = parseInt(localStorage.getItem(SYNC_LAST_TS_KEY) || "0", 10);
+    const lastLabel = lastTs > 0
+      ? new Date(lastTs).toLocaleString()
+      : (folder ? "(no syncs yet on this device)" : "—");
     const wrap = document.createElement("div");
     wrap.className = "stats-block";
     wrap.innerHTML = `
       <div class="stats-h3">Sync between devices</div>
       <div class="subtitle" style="margin-bottom:10px">
         Auto-sync via a shared folder (Google Drive, iCloud, OneDrive, Dropbox).
-        Pick the same folder on each device — the app writes progress.json on
-        every change and reads it on launch; your cloud client moves it
-        between machines. Last-write-wins: avoid studying on two devices at
-        once while offline.
+        Each card review and settings change writes a tiny progress.json to the
+        folder; opening the app reads it back. Closing the app isn't required —
+        sync happens continuously in the background. Last-write-wins, so don't
+        study on two devices at once while offline.
       </div>
       <div class="sync-folder-row">
         <span class="sync-folder-label">Folder:</span>
         <code class="sync-folder-path">${folder ? escapeHtml(folder) : "(none — manual export only)"}</code>
+      </div>
+      <div class="sync-folder-row">
+        <span class="sync-folder-label">Last sync:</span>
+        <span style="font-size:12px;color:var(--text-dim)">${escapeHtml(lastLabel)}</span>
       </div>
       <div class="actions" style="margin-bottom:10px">
         <button class="btn" id="pick-sync-folder">${folder ? "Change sync folder…" : "Choose sync folder…"}</button>
