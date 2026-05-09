@@ -2348,10 +2348,11 @@
 
   function flashFeedback(slot, text, kind) {
     if (!slot) return;
+    // Persist until the next attempt — a correct move triggers renderPanel
+    // (which rebuilds the slot empty) and another wrong move overwrites it
+    // via this same call. No timeout: messages used to vanish in 2.2s,
+    // which often disappeared before the user finished reading them.
     slot.innerHTML = `<div class="feedback ${kind}">${escapeHtml(text)}</div>`;
-    setTimeout(() => {
-      if (slot.querySelector(".feedback")) slot.innerHTML = "";
-    }, 2200);
   }
 
   function sansEqual(a, b) {
