@@ -72,6 +72,25 @@
     setMode(btn.dataset.mode);
   });
   document.getElementById("flip-board").addEventListener("click", () => board.flip());
+  document.getElementById("settings-btn").addEventListener("click", openSettingsModal);
+  document.getElementById("settings-close").addEventListener("click", closeSettingsModal);
+  document.getElementById("settings-modal").addEventListener("click", (e) => {
+    // Click on the backdrop itself (not the modal box) closes.
+    if (e.target.id === "settings-modal") closeSettingsModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSettingsModal();
+  });
+
+  function openSettingsModal() {
+    const body = document.getElementById("settings-body");
+    body.innerHTML = "";
+    body.appendChild(renderProgressSync());
+    document.getElementById("settings-modal").classList.remove("hidden");
+  }
+  function closeSettingsModal() {
+    document.getElementById("settings-modal").classList.add("hidden");
+  }
   document.getElementById("engine-toggle").addEventListener("click", () => {
     showEngine = !showEngine;
     saveShowEngine();
@@ -954,7 +973,6 @@
       wrap.className = "panel-practice";
       while (panelEl.firstChild) wrap.appendChild(panelEl.firstChild);
       panelEl.appendChild(wrap);
-      appendSyncSection();
       appendInlineStats();
       // Reset scroll to top on every new render so the user sees the
       // question, not where they happened to leave the previous scroll.

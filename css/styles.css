@@ -1328,3 +1328,68 @@ body {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
+
+/* Settings button (gear) in the topbar — same look as the reset-score button */
+#settings-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+#settings-btn:hover {
+  color: var(--text);
+}
+
+/* Settings modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 16, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+.modal-backdrop.hidden { display: none; }
+
+.modal {
+  position: relative;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 24px 18px;
+  max-width: 540px;
+  width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.modal h2 {
+  margin: 0 0 18px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 22px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.modal-close:hover {
+  color: var(--text);
+  background: var(--bg-elev-2);
+}

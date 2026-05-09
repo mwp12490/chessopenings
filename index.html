@@ -26,8 +26,17 @@
       <span id="score">0 / 0</span>
       <span class="score-goal" title="Session goal — score color turns green when met">Goal 80%</span>
       <button id="reset-score" title="Reset score">&#x21bb;</button>
+      <button id="settings-btn" title="Settings &amp; sync">&#x2699;</button>
     </div>
   </header>
+
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <button class="modal-close" id="settings-close" title="Close">&times;</button>
+      <h2>Settings &amp; sync</h2>
+      <div id="settings-body"></div>
+    </div>
+  </div>
 
   <main class="layout">
     <section class="board-wrap">
