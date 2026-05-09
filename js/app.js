@@ -927,10 +927,10 @@
       <div class="key-row"><span class="tier-pill tier-C">C</span> ${escapeHtml(TIER_INFO.C.desc)}</div>
       <div class="key-row"><span class="tier-pill tier-D">D</span> ${escapeHtml(TIER_INFO.D.desc)}</div>
       <div class="key-row"><span class="tier-pill tier-F">F</span> ${escapeHtml(TIER_INFO.F.desc)}</div>
-      <div class="key-row"><span class="popularity-pill">★★★★</span> ${escapeHtml(POPULARITY_DESCS[4])}</div>
-      <div class="key-row"><span class="popularity-pill">★★★☆</span> ${escapeHtml(POPULARITY_DESCS[3])}</div>
-      <div class="key-row"><span class="popularity-pill">★★☆☆</span> ${escapeHtml(POPULARITY_DESCS[2])}</div>
-      <div class="key-row"><span class="popularity-pill">★☆☆☆</span> ${escapeHtml(POPULARITY_DESCS[1])}</div>
+      <div class="key-row"><span class="popularity-pill"><span class="stars-on">★★★★</span></span> ${escapeHtml(POPULARITY_DESCS[4])}</div>
+      <div class="key-row"><span class="popularity-pill"><span class="stars-on">★★★</span><span class="stars-off">☆</span></span> ${escapeHtml(POPULARITY_DESCS[3])}</div>
+      <div class="key-row"><span class="popularity-pill"><span class="stars-on">★★</span><span class="stars-off">☆☆</span></span> ${escapeHtml(POPULARITY_DESCS[2])}</div>
+      <div class="key-row"><span class="popularity-pill"><span class="stars-on">★</span><span class="stars-off">☆☆☆</span></span> ${escapeHtml(POPULARITY_DESCS[1])}</div>
       <div class="key-row"><span class="audience-tag aud-beginner">Beginner</span> Beginner-friendly — clear plans, low risk of immediate disaster, easy to learn the typical structures.</div>
       <div class="key-row"><span class="audience-tag aud-intermediate">Intermediate</span> Intermediate-friendly — sound theoretical foundations and manageable complexity for a player past the basics.</div>
       <div class="key-row"><span class="audience-tag aud-gm">GM</span> Played at the top level — regularly appears in modern grandmaster practice.</div>
@@ -2183,7 +2183,10 @@
     const tier = opening.tier || "C";
     const tierInfo = TIER_INFO[tier] || { label: tier, desc: "" };
     const pop = Math.max(1, Math.min(4, opening.popularity || 2));
-    const stars = "★".repeat(pop) + "☆".repeat(4 - pop);
+    // Render filled/empty stars in separate spans so we can color them
+    // differently — without that, ★ and ☆ in the same color blur into
+    // an indistinguishable wash.
+    const stars = `<span class="stars-on">${"★".repeat(pop)}</span><span class="stars-off">${"☆".repeat(4 - pop)}</span>`;
     const popDesc = POPULARITY_DESCS[pop] || "";
     const evalSlot = opts.includeEval
       ? `<span class="eval-pill" data-eval-pill data-tip="Stockfish evaluation of the resulting position at depth 14.\nPositive favors White, negative favors Black.">eval …</span>`

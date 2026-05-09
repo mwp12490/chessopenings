@@ -927,10 +927,20 @@ body {
 }
 
 .popularity-pill {
-  color: var(--accent);
   background: var(--bg-elev-2);
-  letter-spacing: 0;
+  letter-spacing: 1px;
   font-size: 12px;
+  /* Default text color so any unclassified character (shouldn't happen)
+     stays visible. Per-state colors live on the inner spans below. */
+  color: var(--text-dim);
+}
+.popularity-pill .stars-on {
+  color: var(--accent);
+}
+.popularity-pill .stars-off {
+  /* Empty stars in a clearly weaker shade so the user can count filled
+     vs empty at a glance — same-color stars all blurred together. */
+  color: rgba(255, 255, 255, 0.18);
 }
 
 .eval-pill {
