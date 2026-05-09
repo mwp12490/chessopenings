@@ -1320,3 +1320,11 @@ body {
   flex: 1;
   min-width: 0;
 }
+
+/* Nav actions pinned at the top of the practice panel — visually distinct
+   from the rest of the content with a divider below. */
+.panel-practice > .actions:first-child {
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}

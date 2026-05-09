@@ -937,6 +937,13 @@
       const filterEl = createTierFilter();
       panelEl.insertBefore(filterEl, panelEl.firstChild);
 
+      // Move the navigation actions row (Previous / Skip / Next / Try-playing /
+      // Hint / Show solution) above the filters so it always lives in the same
+      // position regardless of what's revealed below — without this it kept
+      // shifting depending on whether feedback / move list / etc. were rendered.
+      const actionsEl = panelEl.querySelector(".actions");
+      if (actionsEl) panelEl.insertBefore(actionsEl, panelEl.firstChild);
+
       // Engine analysis section (toggle + eval slot) is appended at the
       // bottom of the practice content, above the stats divider.
       appendEngineAnalysisSection();
