@@ -145,7 +145,7 @@
       return;
     }
     // Otherwise pick a new card from the SRS scheduler and append.
-    const opening = SRS.pickNext(getFilteredOpeningPool());
+    const opening = SRS.pickNext(getEligibleOpeningPool());
     // Brand-new openings always start as identify so the user sees the
     // position before being asked to reproduce it from memory.
     const isNew = !SRS.getCard(opening.name);
@@ -372,7 +372,7 @@
         || (Math.random() < 0.5 ? "white" : "black");
       if (historyEntry) historyEntry.userSide = userSide;
       mysteryTarget = (historyEntry && historyEntry.mysteryTarget)
-        || pickWeightedRandomOpening(getFilteredOpeningPool());
+        || pickWeightedRandomOpening(getEligibleOpeningPool());
       if (historyEntry) historyEntry.mysteryTarget = mysteryTarget;
     } else {
       userSide = openingSide(opening).toLowerCase();
@@ -2134,6 +2134,28 @@
     return filtered.length ? filtered : OPENINGS;
   }
 
+  // Sub-variations don't enter the rotation until the user has had at least
+  // one successful review of their parent opening. Keeps a beginner from
+  // getting blasted with "Najdorf English Attack" before they've seen the
+  // Sicilian Defense.
+  function openingPrereqsMet(opening) {
+    const prereqs = (typeof PREREQUISITES !== "undefined" && PREREQUISITES[opening.name]) || [];
+    for (const name of prereqs) {
+      const card = SRS.getCard(name);
+      if (!card || (card.successes || 0) === 0) return false;
+    }
+    return true;
+  }
+
+  function getEligibleOpeningPool() {
+    const filtered = getFilteredOpeningPool();
+    const eligible = filtered.filter(openingPrereqsMet);
+    // Defensive: if every filtered opening has unmet prereqs (very early on,
+    // or weird filter combos), fall back to the unrestricted filtered pool
+    // so the rotation never starves.
+    return eligible.length ? eligible : filtered;
+  }
+
   function shuffle(arr) {
     const out = arr.slice();
     for (let i = out.length - 1; i > 0; i--) {
@@ -2181,11 +2203,23 @@
       else if (e.key === "ArrowRight") { e.preventDefault(); exploreStep(1); }
       else if (e.key === "ArrowUp") { e.preventDefault(); exploreStep(-Infinity); }
       else if (e.key === "ArrowDown") { e.preventDefault(); exploreStep(Infinity); }
-    } else if (currentMode === "practice" && isQuestionRevealed()) {
-      if (e.key === "ArrowLeft") { e.preventDefault(); practiceStepBack(); }
-      else if (e.key === "ArrowRight") { e.preventDefault(); practiceStepForward(); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); practiceJumpToStart(); }
-      else if (e.key === "ArrowDown") { e.preventDefault(); practiceJumpToEnd(); }
+    } else if (currentMode === "practice") {
+      if (isQuestionRevealed()) {
+        if (e.key === "ArrowLeft") { e.preventDefault(); practiceStepBack(); }
+        else if (e.key === "ArrowRight") { e.preventDefault(); practiceStepForward(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); practiceJumpToStart(); }
+        else if (e.key === "ArrowDown") { e.preventDefault(); practiceJumpToEnd(); }
+      }
+      if (e.key === "Enter") {
+        // Click whichever button is acting as the primary nav (Skip /
+        // Next → / Next opening →). Mystery before identification has no
+        // primary, so Enter is a no-op there until the user picks.
+        const primary = panelEl.querySelector(".actions .btn.primary");
+        if (primary && !primary.disabled) {
+          e.preventDefault();
+          primary.click();
+        }
+      }
     }
   });
 

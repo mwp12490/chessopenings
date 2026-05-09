@@ -1196,3 +1196,96 @@ for (const op of OPENINGS) {
   op.intermediateFriendly = INTERMEDIATE_FRIENDLY_OPENINGS.has(op.name);
   op.gmFriendly = GM_FRIENDLY_OPENINGS.has(op.name);
 }
+
+// Prerequisite map: a sub-variation only enters the practice rotation once
+// the user has at least one successful review of its parent. Lets a beginner
+// learn "Sicilian Defense" before the app starts asking about
+// "Sicilian Najdorf" or "Yugoslav Attack". One level deep is enough — the
+// chain unlocks naturally as the user progresses.
+const PREREQUISITES = {
+  // Ruy Lopez branches
+  "Berlin Defense": ["Ruy Lopez"],
+  "Closed Ruy Lopez": ["Ruy Lopez"],
+  "Open Ruy Lopez": ["Ruy Lopez"],
+  "Marshall Attack": ["Ruy Lopez"],
+  "Ruy Lopez Exchange": ["Ruy Lopez"],
+  "Schliemann Defense": ["Ruy Lopez"],
+  "Ruy Lopez Steinitz Defense": ["Ruy Lopez"],
+
+  // Italian Game family
+  "Giuoco Piano": ["Italian Game"],
+  "Two Knights Defense": ["Italian Game"],
+  "Evans Gambit": ["Italian Game"],
+
+  // Sicilian variations
+  "Sicilian Najdorf": ["Sicilian Defense"],
+  "Sicilian Dragon": ["Sicilian Defense"],
+  "Sicilian Sveshnikov": ["Sicilian Defense"],
+  "Sicilian Scheveningen": ["Sicilian Defense"],
+  "Sicilian Taimanov": ["Sicilian Defense"],
+  "Sicilian Kan": ["Sicilian Defense"],
+  "Accelerated Dragon": ["Sicilian Defense"],
+  "Sicilian Alapin": ["Sicilian Defense"],
+  "Sicilian Closed": ["Sicilian Defense"],
+  "Smith-Morra Gambit": ["Sicilian Defense"],
+  "Grand Prix Attack": ["Sicilian Defense"],
+  "Richter-Rauzer Attack": ["Sicilian Defense"],
+  // Sicilian sub-variations of named lines
+  "Najdorf English Attack": ["Sicilian Najdorf"],
+  "Najdorf Sozin Variation": ["Sicilian Najdorf"],
+  "Yugoslav Attack": ["Sicilian Dragon"],
+  "Maróczy Bind": ["Accelerated Dragon"],
+
+  // French variations
+  "French Advance": ["French Defense"],
+  "French Winawer": ["French Defense"],
+  "French Tarrasch": ["French Defense"],
+  "French Exchange": ["French Defense"],
+  "French McCutcheon": ["French Defense"],
+  "French Classical": ["French Defense"],
+  "French Rubinstein": ["French Defense"],
+  "French Burn": ["French Defense"],
+
+  // Caro-Kann variations
+  "Caro-Kann Classical": ["Caro-Kann Defense"],
+  "Caro-Kann Advance": ["Caro-Kann Defense"],
+  "Caro-Kann Two Knights": ["Caro-Kann Defense"],
+  "Caro-Kann Karpov": ["Caro-Kann Defense"],
+  "Caro-Kann Tartakower": ["Caro-Kann Defense"],
+  "Panov-Botvinnik Attack": ["Caro-Kann Defense"],
+
+  // Queen's Gambit family
+  "Queen's Gambit Accepted": ["Queen's Gambit"],
+  "Queen's Gambit Declined": ["Queen's Gambit"],
+  "Albin Counter-Gambit": ["Queen's Gambit"],
+  "Tarrasch Defense": ["Queen's Gambit"],
+  // QGD sub-variations
+  "QGD Tartakower": ["Queen's Gambit Declined"],
+  "QGD Lasker Defense": ["Queen's Gambit Declined"],
+  "QGD Cambridge Springs": ["Queen's Gambit Declined"],
+  "QGD Orthodox Defense": ["Queen's Gambit Declined"],
+
+  // Slav family
+  "Semi-Slav Defense": ["Slav Defense"],
+  "Slav Chebanenko": ["Slav Defense"],
+  "Slav Schlechter": ["Slav Defense"],
+
+  // King's Indian Defense
+  "KID Mar del Plata": ["King's Indian Defense"],
+  "KID Sämisch Variation": ["King's Indian Defense"],
+  "KID Fianchetto Variation": ["King's Indian Defense"],
+  "KID Bayonet Attack": ["King's Indian Defense"],
+  "KID Four Pawns Attack": ["King's Indian Defense"],
+
+  // Nimzo-Indian
+  "Nimzo-Indian Rubinstein": ["Nimzo-Indian Defense"],
+  "Nimzo-Indian Classical": ["Nimzo-Indian Defense"],
+  "Nimzo-Indian Sämisch": ["Nimzo-Indian Defense"],
+  "Bogo-Indian Defense": ["Nimzo-Indian Defense"],
+
+  // Benoni / Dutch
+  "Modern Benoni": ["Benoni Defense"],
+  "Benko Gambit": ["Benoni Defense"],
+  "Stonewall Dutch": ["Dutch Defense"],
+  "Leningrad Dutch": ["Dutch Defense"]
+};
