@@ -577,7 +577,17 @@
   // delegated click handler on panelEl handles the navigation.
   function renderContinuationsHtml(opening) {
     const conts = findContinuationOpenings(opening);
-    if (!conts.length) return "";
+    if (!conts.length) {
+      // Leaf line — no longer-prefix opening exists in the database. Say
+      // so explicitly rather than rendering nothing, otherwise the absence
+      // is hard to distinguish from a layout glitch.
+      return `
+        <div class="continuations">
+          <div class="continuations-label">Continues into</div>
+          <div class="continuations-empty">No further named variations from this position in the database.</div>
+        </div>
+      `;
+    }
     const all = [opening, ...conts];
     const items = all.map((op, i) => `
       <button class="continuation-pill${i === 0 ? " active" : ""}" data-continuation-name="${escapeHtml(op.name)}" title="Show ${escapeHtml(op.name)} on the board">
