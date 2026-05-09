@@ -480,6 +480,63 @@
     return a.length === b.length && isPrefixOf(a, b);
   }
 
+  // Openings whose book line extends past `opening`'s — i.e. real follow-up
+  // variations the user might walk into next. Sorted by popularity, capped.
+  function findContinuationOpenings(opening, limit) {
+    const out = OPENINGS.filter(op => {
+      if (op.name === opening.name) return false;
+      if (op.moves.length <= opening.moves.length) return false;
+      return isPrefixOf(opening.moves, op.moves);
+    });
+    out.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    return out.slice(0, limit || 8);
+  }
+
+  // Renders the "Continues into:" pill list. Empty string when no continuations
+  // (for openings at the leaf of their line). Each pill is a button with a
+  // data-continuation-name attribute the panel-level delegated click handler
+  // picks up.
+  function renderContinuationsHtml(opening) {
+    const conts = findContinuationOpenings(opening);
+    if (!conts.length) return "";
+    const items = conts.map(op => `
+      <button class="continuation-pill" data-continuation-name="${escapeHtml(op.name)}" title="Study ${escapeHtml(op.name)} next">
+        <span class="eco">${escapeHtml(op.eco || "")}</span>${escapeHtml(op.name)}
+      </button>
+    `).join("");
+    return `
+      <div class="continuations">
+        <div class="continuations-label">Continues into</div>
+        <div class="continuations-list">${items}</div>
+      </div>
+    `;
+  }
+
+  // Switch the practice card to a specific opening (used by continuation
+  // pills). Loads it as an identify card so the user immediately sees the
+  // resulting position.
+  function loadContinuationByName(name) {
+    const op = OPENINGS.find(o => o.name === name);
+    if (!op) return;
+    const entry = { opening: op, questionType: "identify", graded: false };
+    questionHistory.push(entry);
+    historyIndex = questionHistory.length - 1;
+    if (questionHistory.length > MAX_HISTORY) {
+      questionHistory.shift();
+      historyIndex--;
+    }
+    loadHistoryEntry(entry);
+  }
+
+  // Delegated click handler for continuation pills — one listener at the
+  // panel level so each render doesn't have to wire individual buttons.
+  panelEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".continuation-pill");
+    if (!btn) return;
+    const name = btn.dataset.continuationName;
+    if (name) loadContinuationByName(name);
+  });
+
   function handlePlayMoveAttempt({ from, to }) {
     if (modeState.complete) return false;
     // Only let the user move when it's their turn — during the brief delay
@@ -1543,7 +1600,7 @@
     if (answered) {
       const fb = document.createElement("div");
       fb.className = "feedback info";
-      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco})${renderOpeningPillsHtml(opening, { includeEval: true })}${escapeHtml(opening.description)}${opening.assessment ? `<div class="assessment">${escapeHtml(opening.assessment)}</div>` : ""}<div class="moves-line">Moves: ${formatNumberedSan(opening.moves)}</div>`;
+      fb.innerHTML = `<strong>${escapeHtml(opening.name)}</strong> (${opening.eco})${renderOpeningPillsHtml(opening, { includeEval: true })}${escapeHtml(opening.description)}${opening.assessment ? `<div class="assessment">${escapeHtml(opening.assessment)}</div>` : ""}<div class="moves-line">Moves: ${formatNumberedSan(opening.moves)}</div>${renderContinuationsHtml(opening)}`;
       panelEl.appendChild(fb);
       // Engine eval of the position after the opening's main line.
       try { fetchAndShowEval(fenFromMoves(opening.moves)); } catch (e) {}
@@ -1612,6 +1669,7 @@
       ${complete ? renderOpeningPillsHtml(opening, { includeEval: true }) : ""}
       ${complete ? `<div class="desc">${escapeHtml(opening.description)}</div>` : ""}
       ${complete && opening.assessment ? `<div class="assessment">${escapeHtml(opening.assessment)}</div>` : ""}
+      ${complete ? renderContinuationsHtml(opening) : ""}
       <div class="progress"><div style="width:${(moveIndex / opening.moves.length) * 100}%"></div></div>
     `;
     panelEl.appendChild(meta);
@@ -1701,6 +1759,7 @@
         ${complete && nameAnswered ? renderOpeningPillsHtml(revealOpening, { includeEval: true }) : ""}
         ${complete && nameAnswered ? `<div class="desc">${escapeHtml(revealOpening.description)}</div>` : ""}
         ${complete && nameAnswered && revealOpening.assessment ? `<div class="assessment">${escapeHtml(revealOpening.assessment)}</div>` : ""}
+        ${complete && nameAnswered ? renderContinuationsHtml(revealOpening) : ""}
         ${!isMystery ? `<div class="progress"><div style="width:${(playedCount / opening.moves.length) * 100}%"></div></div>` : ""}
       `;
     }

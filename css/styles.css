@@ -1289,6 +1289,54 @@ body {
   border-color: #3a6b94;
 }
 
+/* "Continues into" pill list shown on revealed practice cards.
+   Each pill is a click-to-study shortcut into a follow-up variation. */
+.continuations {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.continuations-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.continuations-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.continuation-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.continuation-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.continuation-pill .eco {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.continuation-pill:hover .eco {
+  color: var(--accent);
+}
+
 .acc-bar {
   width: 70px;
   height: 6px;
