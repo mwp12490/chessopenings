@@ -1493,7 +1493,7 @@
       appendPreviousButton(actions);
 
       const skip = document.createElement("button");
-      skip.className = "btn";
+      skip.className = "btn primary";
       skip.textContent = "Skip";
       skip.addEventListener("click", () => {
         score.total++;
