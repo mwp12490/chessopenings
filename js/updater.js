@@ -87,8 +87,12 @@
           onClick: async (e) => {
             e.preventDefault();
             const lk = document.getElementById("update-link");
+            // Give immediate visual feedback so the user knows the click
+            // registered, even before the first progress event arrives.
             lk.style.pointerEvents = "none";
             lk.style.opacity = "0.6";
+            lk.textContent = "Working…";
+            label.textContent = "Preparing download…";
             if (window.updater.onProgress) {
               window.updater.onProgress((msg) => { label.textContent = msg; });
             }

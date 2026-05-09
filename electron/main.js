@@ -96,14 +96,31 @@ ipcMain.handle("updater:install", async (_event, url) => {
   const tmp = os.tmpdir();
   const stamp = Date.now();
 
+  // Throttled progress reporter so we don't spam the renderer.
+  let lastPctSent = -1;
+  const onDlProgress = (received, total) => {
+    if (!total) {
+      const mb = (received / (1024 * 1024)).toFixed(1);
+      send(`Downloading… ${mb} MB`);
+      return;
+    }
+    const pct = Math.floor((received / total) * 100);
+    if (pct !== lastPctSent) {
+      lastPctSent = pct;
+      const mb = (received / (1024 * 1024)).toFixed(1);
+      const totalMb = (total / (1024 * 1024)).toFixed(1);
+      send(`Downloading… ${pct}% (${mb} / ${totalMb} MB)`);
+    }
+  };
+
   if (process.platform === "win32") {
     // Windows: download the NSIS installer and launch it. The user steps
     // through the (small) installer dialog; NSIS handles upgrading the
     // existing installation in place. We exit so the installer can replace
     // our running binary.
     const exePath = path.join(tmp, `cot-update-${stamp}.exe`);
-    send("Downloading update…");
-    await downloadHttps(url, exePath);
+    send("Downloading… 0%");
+    await downloadHttps(url, exePath, onDlProgress);
     send("Launching installer…");
     shell.openPath(exePath).catch(() => {});
     setTimeout(() => app.quit(), 500);
@@ -117,8 +134,8 @@ ipcMain.handle("updater:install", async (_event, url) => {
   const installerSh = path.join(tmp, `cot-install-${stamp}.sh`);
 
   // 1. Download.
-  send("Downloading update…");
-  await downloadHttps(url, dmgPath);
+  send("Downloading… 0%");
+  await downloadHttps(url, dmgPath, onDlProgress);
 
   // 2. Mount.
   send("Mounting installer…");
@@ -167,7 +184,9 @@ ipcMain.handle("updater:install", async (_event, url) => {
 });
 
 // Follows redirects (GitHub release asset URLs redirect to S3-hosted URLs).
-function downloadHttps(url, dest) {
+// onProgress(receivedBytes, totalBytes) is called as data streams in. totalBytes
+// may be 0 if the server didn't send Content-Length.
+function downloadHttps(url, dest, onProgress) {
   return new Promise((resolve, reject) => {
     let redirectsLeft = 5;
     const visit = (currentUrl) => {
@@ -180,6 +199,14 @@ function downloadHttps(url, dest) {
         if (res.statusCode !== 200) {
           res.resume();
           return reject(new Error("Download failed: HTTP " + res.statusCode));
+        }
+        const total = parseInt(res.headers["content-length"] || "0", 10) || 0;
+        let received = 0;
+        if (typeof onProgress === "function") {
+          res.on("data", (chunk) => {
+            received += chunk.length;
+            try { onProgress(received, total); } catch (e) {}
+          });
         }
         const file = fs.createWriteStream(dest);
         res.pipe(file);

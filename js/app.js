@@ -1180,6 +1180,39 @@
   const SYNC_FOLDER_KEY = "chess-openings-trainer.sync-folder";
   const SYNC_LAST_TS_KEY = "chess-openings-trainer.sync-ts";
 
+  // Updates the small sync status pip in the topbar. Hidden when no folder is
+  // configured. Spinner while a write is in flight, green ✓ when synced,
+  // red ✕ if the last write failed.
+  function updateSyncIndicator(state) {
+    const el = document.getElementById("sync-indicator");
+    if (!el) return;
+    const folder = localStorage.getItem(SYNC_FOLDER_KEY);
+    if (!folder) {
+      el.className = "sync-indicator hidden";
+      el.textContent = "";
+      el.title = "";
+      return;
+    }
+    if (state === "syncing") {
+      el.className = "sync-indicator syncing";
+      el.innerHTML = "<span>↻</span>";
+      el.title = "Syncing…";
+      return;
+    }
+    if (state === "error") {
+      el.className = "sync-indicator error";
+      el.textContent = "✕";
+      el.title = "Last sync failed — will retry on next change";
+      return;
+    }
+    // synced (default / idle) — show a checkmark with the last-sync time.
+    const ts = parseInt(localStorage.getItem(SYNC_LAST_TS_KEY) || "0", 10);
+    const tsLabel = ts > 0 ? new Date(ts).toLocaleString() : "(never)";
+    el.className = "sync-indicator synced";
+    el.textContent = "✓";
+    el.title = "Synced · last sync: " + tsLabel;
+  }
+
   function buildProgressJson() {
     const storage = {};
     for (const k of SYNC_KEYS) {
@@ -1236,15 +1269,18 @@
     const folder = localStorage.getItem(SYNC_FOLDER_KEY);
     if (!folder) return;
     if (_syncWriteTimer) clearTimeout(_syncWriteTimer);
+    updateSyncIndicator("syncing");
     _syncWriteTimer = setTimeout(async () => {
       _syncWriteTimer = null;
       try {
         const data = buildProgressJson();
         await window.syncFs.write(folder, JSON.stringify(data, null, 2));
         localStorage.setItem(SYNC_LAST_TS_KEY, String(Date.parse(data.exportedAt)));
+        updateSyncIndicator("synced");
       } catch (e) {
         // Soft-fail: if the folder went away (Drive offline, etc.), just
         // skip this write. Next change will retry.
+        updateSyncIndicator("error");
       }
     }, 800);
   }
@@ -1263,6 +1299,10 @@
   // Kick off the launch-time pull. Fire-and-forget — it'll reload the page
   // if it finds newer remote state.
   autoSyncOnLaunch().catch(() => {});
+
+  // Initialize the topbar sync indicator now that the DOM is up. Reflects
+  // whatever state we last persisted (synced / no folder).
+  updateSyncIndicator("synced");
 
   function exportProgress() {
     const storage = {};
@@ -1358,12 +1398,14 @@
     }
     // No existing file (or user chose to keep local) — write current state.
     autoSyncWriteDebounced();
+    updateSyncIndicator("syncing");
     renderPanel();
   }
 
   function clearSyncFolder() {
     localStorage.removeItem(SYNC_FOLDER_KEY);
     localStorage.removeItem(SYNC_LAST_TS_KEY);
+    updateSyncIndicator("synced");
     renderPanel();
   }
 

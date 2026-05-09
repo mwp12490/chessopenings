@@ -1329,6 +1329,28 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+/* Sync status indicator in the topbar — small dot/check that shows whether
+   the latest progress write has reached the cloud folder. Hidden when no
+   sync folder is configured. */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-dim);
+  user-select: none;
+  cursor: default;
+}
+.sync-indicator.hidden { display: none; }
+.sync-indicator.synced { color: var(--good, #4caf50); }
+.sync-indicator.syncing { color: var(--text-dim); }
+.sync-indicator.error { color: var(--bad, #e25c5c); }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+.sync-indicator.syncing > span { display: inline-block; animation: sync-spin 1.2s linear infinite; }
+
 /* Settings button (gear) in the topbar — same look as the reset-score button */
 #settings-btn {
   background: transparent;
