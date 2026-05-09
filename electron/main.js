@@ -113,6 +113,34 @@ ipcMain.handle("legacy:clear", async () => {
   await fsp.unlink(dump).catch(() => {});
 });
 
+// Local-disk backup of the user's progress JSON. Written on every state
+// change as a belt-and-suspenders backup against browser-storage loss
+// (e.g. origin changes between app versions). Lives in userData so it
+// survives app updates regardless of installation path.
+const PROGRESS_BACKUP_FILE = "progress-backup.json";
+
+ipcMain.handle("progress:read", async () => {
+  const f = path.join(app.getPath("userData"), PROGRESS_BACKUP_FILE);
+  try {
+    return await fsp.readFile(f, "utf8");
+  } catch (e) {
+    return null;
+  }
+});
+
+ipcMain.handle("progress:write", async (_event, json) => {
+  if (typeof json !== "string") return false;
+  const dir = app.getPath("userData");
+  await fsp.mkdir(dir, { recursive: true });
+  const f = path.join(dir, PROGRESS_BACKUP_FILE);
+  // Atomic write: write to a temp file, then rename. Avoids leaving a
+  // half-written file if the process is killed mid-write.
+  const tmp = f + ".tmp";
+  await fsp.writeFile(tmp, json, "utf8");
+  await fsp.rename(tmp, f);
+  return true;
+});
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,

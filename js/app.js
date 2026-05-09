@@ -31,6 +31,29 @@
     }
   }
 
+  // Belt-and-suspenders: pull from the userData JSON backup if relevant
+  // localStorage keys are empty. This protects against future origin
+  // changes / Chromium storage quirks that browser-only persistence
+  // can't survive on its own.
+  if (window.progressFs) {
+    try {
+      const raw = await window.progressFs.read();
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const storage = parsed && parsed.storage;
+        if (storage && typeof storage === "object") {
+          for (const [k, v] of Object.entries(storage)) {
+            if (localStorage.getItem(k) == null && typeof v === "string") {
+              localStorage.setItem(k, v);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Local progress restore failed:", e);
+    }
+  }
+
   const boardEl = document.getElementById("board");
   const overlayEl = document.getElementById("board-overlay");
   const panelEl = document.getElementById("panel");
@@ -1417,13 +1440,32 @@
     }, 800);
   }
 
-  // Wrap SRS.review so each review triggers a debounced sync write. The
-  // wrap runs once at module load. SRS internals are unchanged.
+  // Always-on local backup — mirrors the same progress JSON into the app's
+  // userData directory on every state change. Independent of any cloud
+  // sync the user may or may not have configured. Restored on launch (see
+  // window.progressFs.read() at the top of this IIFE).
+  let _localBackupTimer = null;
+  function localBackupWriteDebounced() {
+    if (!window.progressFs) return;
+    if (_localBackupTimer) clearTimeout(_localBackupTimer);
+    _localBackupTimer = setTimeout(() => {
+      _localBackupTimer = null;
+      try {
+        const data = buildProgressJson();
+        window.progressFs.write(JSON.stringify(data, null, 2)).catch(() => {});
+      } catch (e) {}
+    }, 400);
+  }
+
+  // Wrap SRS.review so each review triggers both the (optional) cloud
+  // sync write and the always-on local userData backup. SRS internals are
+  // unchanged.
   if (window.SRS && typeof window.SRS.review === "function") {
     const _origReview = window.SRS.review;
     window.SRS.review = function () {
       const r = _origReview.apply(window.SRS, arguments);
       autoSyncWriteDebounced();
+      localBackupWriteDebounced();
       return r;
     };
   }
@@ -1530,6 +1572,7 @@
     }
     // No existing file (or user chose to keep local) — write current state.
     autoSyncWriteDebounced();
+    localBackupWriteDebounced();
     updateSyncIndicator("syncing");
     renderPanel();
   }
@@ -2306,6 +2349,7 @@
   function saveShowEngine() {
     try { localStorage.setItem(SHOW_ENGINE_KEY, String(showEngine)); } catch (e) {}
     if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
+    if (typeof localBackupWriteDebounced === "function") localBackupWriteDebounced();
   }
 
   function loadTierFilter() {
@@ -2322,6 +2366,7 @@
   function saveTierFilter() {
     try { localStorage.setItem(TIER_FILTER_KEY, JSON.stringify([...tierFilter])); } catch (e) {}
     if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
+    if (typeof localBackupWriteDebounced === "function") localBackupWriteDebounced();
   }
 
   function loadAudienceFilter() {
@@ -2338,6 +2383,7 @@
   function saveAudienceFilter() {
     try { localStorage.setItem(AUDIENCE_FILTER_KEY, JSON.stringify([...audienceFilter])); } catch (e) {}
     if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
+    if (typeof localBackupWriteDebounced === "function") localBackupWriteDebounced();
   }
 
   function openingMatchesAudience(o) {

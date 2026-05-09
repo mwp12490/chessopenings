@@ -27,3 +27,13 @@ contextBridge.exposeInMainWorld("legacyMigration", {
   read: () => ipcRenderer.invoke("legacy:read"),
   clear: () => ipcRenderer.invoke("legacy:clear")
 });
+
+// Local progress backup — independent of localStorage / Chromium storage
+// quirks. The renderer writes the SRS + settings JSON to userData on every
+// change, and reads it back on launch as a safety net so that browser-
+// storage hiccups (origin changes, profile resets, etc.) can't wipe your
+// study progress.
+contextBridge.exposeInMainWorld("progressFs", {
+  read: () => ipcRenderer.invoke("progress:read"),
+  write: (json) => ipcRenderer.invoke("progress:write", json)
+});
