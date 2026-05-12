@@ -87,24 +87,6 @@
   const board = new ChessBoard(boardEl, {
     onMoveAttempt: handleMoveAttempt,
     legalSquaresFor: (square) => {
-      // In Practice post-reveal we allow free play with either color, so
-      // the legal-square highlight should match whichever side the piece
-      // on `square` belongs to — even when chess.js thinks it's the other
-      // side's turn.
-      if (currentMode === "practice" && isQuestionRevealed()) {
-        const piece = game.get(square);
-        if (!piece) return [];
-        if (piece.color !== game.turn()) {
-          const parts = game.fen().split(" ");
-          parts[1] = piece.color;
-          parts[3] = "-";
-          const probe = new Chess();
-          if (probe.load(parts.join(" "))) {
-            return probe.moves({ square, verbose: true }).map(m => m.to);
-          }
-          return [];
-        }
-      }
       const moves = game.moves({ square, verbose: true });
       return moves.map(m => m.to);
     }
@@ -302,8 +284,16 @@
   }
 
   function loadIdentifyCard(opening, historyEntry) {
-    const fen = fenFromMoves(opening.moves);
-    game.load(fen);
+    // Replay the moves through chess.js (rather than loading the final FEN
+    // directly) so the game retains a move history. Without this the
+    // ←/→ arrow keys have nothing to step through after the answer is
+    // revealed — game.undo() returns null on a position loaded via FEN.
+    game.reset();
+    let lastMove = null;
+    for (const san of opening.moves) {
+      const m = game.move(san, { sloppy: true });
+      if (m) lastMove = { from: m.from, to: m.to };
+    }
     // Random board orientation per card so the user sees positions from
     // both sides over time. Stored on the history entry so re-visits keep
     // the same view.
@@ -311,7 +301,7 @@
       || (Math.random() < 0.5 ? "white" : "black");
     if (historyEntry) historyEntry.orientation = orientation;
     if (board.orientation !== orientation) board.setOrientation(orientation);
-    board.setPosition(game.board(), null);
+    board.setPosition(game.board(), lastMove);
     updateTurnIndicator();
 
     const distractors = getRandomOpenings(5, opening, getFilteredOpeningPool());
@@ -560,14 +550,19 @@
   }
 
   // Openings whose book line extends past `opening`'s — i.e. real follow-up
-  // variations the user might walk into next. Sorted by popularity, capped.
+  // variations the user might walk into next. Sorted by how many extra
+  // moves are needed to reach them (shortest extensions first), then by
+  // popularity within the same depth. Capped at `limit`.
   function findContinuationOpenings(opening, limit) {
     const out = OPENINGS.filter(op => {
       if (op.name === opening.name) return false;
       if (op.moves.length <= opening.moves.length) return false;
       return isPrefixOf(opening.moves, op.moves);
     });
-    out.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    out.sort((a, b) => {
+      if (a.moves.length !== b.moves.length) return a.moves.length - b.moves.length;
+      return (b.popularity || 0) - (a.popularity || 0);
+    });
     return out.slice(0, limit || 8);
   }
 
@@ -1296,18 +1291,10 @@
   // ISN'T, we flip chess.js's active color so the move can land — otherwise
   // chess.js rejects opposite-color moves and "free play" doesn't feel free.
   function handleFreeMoveAttempt({ from, to }) {
-    let m = game.move({ from, to, promotion: "q" });
-    if (!m) {
-      const piece = game.get(from);
-      if (piece && piece.color !== game.turn()) {
-        const parts = game.fen().split(" ");
-        parts[1] = piece.color;
-        parts[3] = "-"; // stale en-passant target after the flip
-        if (game.load(parts.join(" "))) {
-          m = game.move({ from, to, promotion: "q" });
-        }
-      }
-    }
+    // Post-reveal free play follows normal turn alternation — sides take
+    // turns. (Previously a turn-flip workaround let the user keep playing
+    // one color repeatedly, which made every game state confusing.)
+    const m = game.move({ from, to, promotion: "q" });
     if (!m) return false;
     // A new move from a stepped-back position branches off — drop forward
     // history so → doesn't replay a stale line.
