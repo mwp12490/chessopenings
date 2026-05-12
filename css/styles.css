@@ -1371,6 +1371,14 @@ body {
   line-height: 1.5;
   margin: 12px 0;
 }
+.trick-prompt-tag { margin-bottom: 8px; }
+.trick-outcome {
+  display: inline-block;
+  padding: 2px 0;
+}
+.trick-outcome.ok { color: var(--good, #7fce85); }
+.trick-outcome.warn { color: #e8a070; }
+.trick-outcome.bad { color: #ee8c80; }
 .trick-header {
   display: flex;
   align-items: center;

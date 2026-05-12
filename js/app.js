@@ -953,6 +953,7 @@
     updateTurnIndicator();
     if (correct) {
       modeState.complete = true;
+      modeState.completedBy = modeState.hintShown ? "hinted" : "correct";
       modeState.lastUserSan = m.san;
       if (!modeState.counted) {
         modeState.counted = true;
@@ -961,8 +962,10 @@
         recordResult(trickKey, "trick", wasClean);
         SRS.review(trickKey, wasClean ? "good" : "again");
       }
+      // Visible "Correct!" flash on the board so the user knows the move
+      // landed — the panel transitions immediately after.
+      flashOverlay("Correct!", "ok", 900);
       renderPanel();
-      // Auto-play the continuation moves so the user sees the full payoff.
       if (modeState.trick.continuation && modeState.trick.continuation.length) {
         setTimeout(() => playTrickContinuation(0), 700);
       }
@@ -973,7 +976,7 @@
       board.setPosition(game.board(), null);
       modeState.mistakes++;
       const slot = panelEl.querySelector(".feedback-slot");
-      flashFeedback(slot, "Not the trick refutation — try again, or hit Show solution.", "bad");
+      flashFeedback(slot, `${m.san} isn't the trick refutation — try again, or hit Show solution.`, "bad");
       return false;
     }
   }
@@ -998,6 +1001,7 @@
     const m = game.move(trick.userMove, { sloppy: true });
     if (!m) return;
     modeState.complete = true;
+    modeState.completedBy = "solution";
     modeState.mistakes = Math.max(modeState.mistakes, 1);
     modeState.lastUserSan = m.san;
     board.setPosition(game.board(), { from: m.from, to: m.to });
@@ -1031,17 +1035,32 @@
     panelEl.innerHTML = "";
 
     const h = document.createElement("h2");
-    h.textContent = trick.category === "attack"
-      ? "Find the punishment"
-      : "Don't fall for it";
+    if (modeState.complete) {
+      // The h2 is now the explicit outcome banner so it's the first thing
+      // the user sees when the panel updates. Green check / orange warn /
+      // matches the visual style of correct / incorrect feedback elsewhere.
+      if (modeState.completedBy === "correct") {
+        h.innerHTML = `<span class="trick-outcome ok">✓ Correct!</span>`;
+      } else if (modeState.completedBy === "hinted") {
+        h.innerHTML = `<span class="trick-outcome warn">✓ Correct (with a hint)</span>`;
+      } else {
+        h.innerHTML = `<span class="trick-outcome bad">✗ Solution shown</span>`;
+      }
+    } else {
+      h.textContent = trick.category === "attack"
+        ? "Find the punishment"
+        : "Don't fall for it";
+    }
     panelEl.appendChild(h);
 
     const sub = document.createElement("div");
     sub.className = "subtitle";
     const turn = game.turn() === "w" ? "White" : "Black";
-    sub.textContent = modeState.complete
-      ? "Trick: " + trick.name
-      : `${turn} to move — find the ${trick.category === "attack" ? "winning" : "defensive"} move.`;
+    if (modeState.complete) {
+      sub.textContent = trick.name + (trick.eco ? " (" + trick.eco + ")" : "");
+    } else {
+      sub.textContent = `${turn} to move — make your move on the board.`;
+    }
     panelEl.appendChild(sub);
 
     if (modeState.complete) {
@@ -1051,18 +1070,24 @@
         ? `<span class="trick-tag trick-attack">Attack</span>`
         : `<span class="trick-tag trick-defend">Defend</span>`;
       const tierTag = `<span class="tier-pill tier-${trick.tier || "C"}">${trick.tier || "C"}</span>`;
-      const ecoTag = trick.eco ? `<span class="eco">${escapeHtml(trick.eco)}</span>` : "";
       fb.innerHTML = `
-        <div class="trick-header">${ecoTag}<strong>${escapeHtml(trick.name)}</strong> ${catTag} ${tierTag}</div>
+        <div class="trick-header">${catTag} ${tierTag}</div>
         <div class="trick-desc">${escapeHtml(trick.description)}</div>
-        <div class="trick-why"><strong>Why:</strong> ${escapeHtml(trick.why || "")}</div>
-        <div class="moves-line">Line: ${formatNumberedSan([...trick.setupMoves, modeState.lastUserSan || trick.userMove, ...(trick.continuation || [])])}</div>
+        <div class="trick-why"><strong>Why it works:</strong> ${escapeHtml(trick.why || "")}</div>
+        <div class="moves-line"><strong>Full line:</strong> ${formatNumberedSan([...trick.setupMoves, modeState.lastUserSan || trick.userMove, ...(trick.continuation || [])])}</div>
       `;
       panelEl.appendChild(fb);
     } else {
+      // Pre-answer: short prompt without revealing the trick's name.
       const prompt = document.createElement("div");
       prompt.className = "trick-prompt";
-      prompt.innerHTML = `<div>${escapeHtml(trick.description)}</div>`;
+      const catTag = trick.category === "attack"
+        ? `<span class="trick-tag trick-attack">Attack</span>`
+        : `<span class="trick-tag trick-defend">Defend</span>`;
+      prompt.innerHTML = `
+        <div class="trick-prompt-tag">${catTag}</div>
+        <div>${escapeHtml(trick.description)}</div>
+      `;
       panelEl.appendChild(prompt);
     }
 
