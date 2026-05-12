@@ -66,16 +66,10 @@
   const SHOW_ENGINE_KEY = "chess-openings-trainer.show-engine";
   const TIER_FILTER_KEY = "chess-openings-trainer.tier-filter";
   const AUDIENCE_FILTER_KEY = "chess-openings-trainer.audience-filter";
-  // Score is per-session — not persisted across launches.
+  // Score is per-session — not persisted across launches. Each graded
+  // question attempt is one tally: denominator bumped by 1, numerator by
+  // 1 if correct.
   let score = { correct: 0, total: 0 };
-  // Per-opening, per-question-type results for this session. Keyed by
-  // opening name → { identify: bool, setup: bool, play: bool, playmystery: bool }.
-  // The score is computed as a sum of per-opening fractions: an opening
-  // with 3 of its 4 attempted question types correct contributes 0.75 to
-  // the numerator and 1 to the denominator. Best-effort semantics —
-  // once a type is correct it stays correct (a later wrong attempt
-  // doesn't undo learning), so revisits via Previous can only improve.
-  const sessionResults = {};
   let showEngine = loadShowEngine();
   let tierFilter = loadTierFilter();
   let audienceFilter = loadAudienceFilter();
@@ -169,7 +163,6 @@
     }
   });
   document.getElementById("reset-score").addEventListener("click", () => {
-    for (const k in sessionResults) delete sessionResults[k];
     score.correct = 0;
     score.total = 0;
     renderScore();
@@ -2508,41 +2501,18 @@
       return;
     }
     const pct = Math.round((score.correct / score.total) * 100);
-    // Numerator is a sum of per-opening fractions, so it can be non-integer
-    // (e.g. 1.75 over 3 openings = 58%). Show with up to 1 decimal, no
-    // trailing zeros.
-    const numStr = Number.isInteger(score.correct)
-      ? String(score.correct)
-      : (Math.round(score.correct * 10) / 10).toString();
-    scoreEl.textContent = `${numStr} / ${score.total} · ${pct}%`;
+    scoreEl.textContent = `${score.correct} / ${score.total} · ${pct}%`;
     scoreEl.className = pct >= SCORE_GOAL_PCT ? "score-met" : "score-below";
   }
 
-  // Record the result of a single question-type attempt for an opening.
-  // Best-effort: a previously-correct type stays correct even if a later
-  // attempt is wrong. Updates score and re-renders.
+  // Each graded question attempt counts as one tally in the score.
+  // openingName / questionType are accepted for API symmetry but the
+  // simple scoring doesn't need them — every call bumps the denominator
+  // by 1, and the numerator by 1 if the answer was correct.
   function recordResult(openingName, questionType, isCorrect) {
-    if (!openingName || !questionType) return;
-    if (!sessionResults[openingName]) sessionResults[openingName] = {};
-    if (sessionResults[openingName][questionType] === true) return; // sticky
-    sessionResults[openingName][questionType] = !!isCorrect;
-    recomputeScore();
+    score.total++;
+    if (isCorrect) score.correct++;
     renderScore();
-  }
-
-  function recomputeScore() {
-    let openings = 0;
-    let sum = 0;
-    for (const name in sessionResults) {
-      const types = sessionResults[name];
-      const keys = Object.keys(types);
-      if (!keys.length) continue;
-      openings++;
-      const correct = keys.filter(k => types[k]).length;
-      sum += correct / keys.length;
-    }
-    score.correct = sum;
-    score.total = openings;
   }
 
   function loadScore() {
