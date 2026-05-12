@@ -2699,6 +2699,23 @@
           primary.click();
         }
       }
+    } else if (currentMode === "tricks") {
+      // Same arrow nav as Practice once the trick is complete. The
+      // practiceStepBack/Forward functions just operate on game.history()
+      // and modeState.practiceRedoStack, so they work for any mode.
+      if (modeState.complete) {
+        if (e.key === "ArrowLeft") { e.preventDefault(); practiceStepBack(); }
+        else if (e.key === "ArrowRight") { e.preventDefault(); practiceStepForward(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); practiceJumpToStart(); }
+        else if (e.key === "ArrowDown") { e.preventDefault(); practiceJumpToEnd(); }
+      }
+      if (e.key === "Enter") {
+        const primary = panelEl.querySelector(".actions .btn.primary");
+        if (primary && !primary.disabled) {
+          e.preventDefault();
+          primary.click();
+        }
+      }
     }
   });
 
