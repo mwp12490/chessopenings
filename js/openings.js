@@ -135,7 +135,7 @@ const OPENINGS = [
     aliases: ["Russian Defense","Petroff Defense"],
     description: "A solid, symmetrical reply that strikes back at e4 immediately.",
     assessment: "Famously drawish — Black's symmetrical approach equalizes so reliably that it's a top choice for elite players seeking solidity with the black pieces.",
-    tier: "S",
+    tier: "A",
     popularity: 3
   },
   {
@@ -182,7 +182,7 @@ const OPENINGS = [
     moves: ["e4","c5","Nf3","d6","d4","cxd4","Nxd4","Nf6","Nc3","g6"],
     description: "Black fianchettoes the king's bishop, creating sharp, double-edged positions.",
     assessment: "Razor-sharp — opposite-side castling means both kings get attacked, and concrete calculation often outweighs strategy. High risk, high reward at every level.",
-    tier: "S",
+    tier: "A",
     popularity: 3
   },
   {
@@ -191,7 +191,7 @@ const OPENINGS = [
     moves: ["e4","c5","Nf3","Nc6","d4","cxd4","Nxd4","Nf6","Nc3","e5"],
     description: "Black accepts a backward d-pawn for active piece play and dynamic chances.",
     assessment: "Modern Sicilian classic — Black trades a structural defect (d6 weakness) for piece activity and central control. Magnus Carlsen has trusted it in world championships.",
-    tier: "S",
+    tier: "A",
     popularity: 3
   },
   {
@@ -412,7 +412,7 @@ const OPENINGS = [
     moves: ["d4","d5","c4","dxc4"],
     description: "Black takes the pawn; White expects to recover it while gaining the center.",
     assessment: "Black grabs the pawn temporarily — White recovers it while gaining a strong center. Sound for both sides; Black just needs to develop quickly to neutralize White's space.",
-    tier: "S",
+    tier: "B",
     popularity: 3
   },
   {
