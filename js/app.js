@@ -1867,9 +1867,11 @@
       body = rows.map(({ opening, successes, total, accuracy }) => {
         const pct = Math.round(accuracy);
         const cls = pct >= 80 ? "acc-good" : (pct >= 50 ? "acc-mid" : "acc-bad");
+        const tier = opening.tier || "C";
         return `
           <div class="hard-row">
             <span class="eco">${opening.eco}</span>
+            <span class="tier-pill tier-${tier}" title="Tier ${tier}">${tier}</span>
             <span class="hard-name">${escapeHtml(opening.name)}</span>
             <span class="acc-bar"><span class="acc-bar-fill ${cls}" style="width:${pct}%"></span></span>
             <span class="hard-meta acc-meta ${cls}">${successes}/${total} · ${pct}%</span>
