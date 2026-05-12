@@ -62,7 +62,7 @@ const OPENINGS = [
     moves: ["e4","e5","Nf3","Nc6","Bb5","Nf6"],
     description: "A solid Ruy Lopez line famous for its drawish endgame, used at the highest level.",
     assessment: "The Berlin Wall — Kasparov vs. Kramnik 2000 cemented its reputation as nearly impossible to crack at the top level. Black accepts a slightly worse endgame for rock-solid drawing chances.",
-    tier: "S",
+    tier: "A",
     popularity: 4
   },
   {
@@ -439,7 +439,7 @@ const OPENINGS = [
     moves: ["d4","d5","c4","c6","Nf3","Nf6","Nc3","e6"],
     description: "Combines Slav and QGD; rich, complex middlegame positions.",
     assessment: "Black keeps both options (c6 and e6) for maximum flexibility — leads to the rich, sharp middlegames that grandmasters love. Anand and Kramnik favorites.",
-    tier: "S",
+    tier: "A",
     popularity: 3
   },
   {
@@ -466,7 +466,7 @@ const OPENINGS = [
     moves: ["d4","Nf6","c4","g6","Nc3","d5"],
     description: "Black challenges the center with ...d5, leading to dynamic, theoretical play.",
     assessment: "Black challenges the center with ...d5 instead of supporting it — dynamic and theoretically deep. Used at the world championship level (Kasparov, Karjakin).",
-    tier: "S",
+    tier: "A",
     popularity: 3
   },
   {
@@ -484,7 +484,7 @@ const OPENINGS = [
     moves: ["d4","Nf6","c4","e6","Nf3","b6"],
     description: "Black fianchettoes the queen's bishop to contest the long diagonal.",
     assessment: "Black contests the long light-square diagonal with ...b6/Bb7 — solid, flexible, and well-tested. The natural fallback when White avoids the Nimzo with Nf3.",
-    tier: "S",
+    tier: "A",
     popularity: 3
   },
   {
@@ -502,7 +502,7 @@ const OPENINGS = [
     moves: ["d4","Nf6","c4","e6","g3"],
     description: "Combines Queen's Gambit and king's fianchetto for long-term pressure.",
     assessment: "Long-term positional pressure on the queenside through the fianchettoed bishop — a torture-by-small-edges weapon. Favored by patient positional grandmasters.",
-    tier: "S",
+    tier: "A",
     popularity: 3
   },
   {
@@ -594,7 +594,7 @@ const OPENINGS = [
     moves: ["c4"],
     description: "Flexible flank opening; can transpose into many central structures.",
     assessment: "Maximum flexibility — White can transpose into many central structures while denying Black the open game. A favorite of move-order specialists like Anatoly Karpov.",
-    tier: "S",
+    tier: "A",
     popularity: 4
   },
   {
