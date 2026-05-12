@@ -202,6 +202,7 @@
     modeState = {};
     renderFilterBar();
     if (mode === "practice") startPractice();
+    else if (mode === "tricks") startTricks();
     else if (mode === "explore") startExplore();
   }
 
@@ -901,6 +902,218 @@
     return true;
   }
 
+  // ===== Tricks Mode =====
+  // Each trick is its own SRS card, keyed by "trick:<id>" so it doesn't
+  // collide with openings. The pool exposed to SRS looks like an opening
+  // (has .name) so SRS.pickNext / SRS.getCard work as-is.
+  const TRICKS_LIST = (typeof window !== "undefined" && window.TRICKS) || [];
+  function buildTrickPool() {
+    return TRICKS_LIST.map(t => ({ ...t, name: "trick:" + t.id }));
+  }
+
+  function startTricks() {
+    nextTrick();
+  }
+
+  function nextTrick() {
+    const pool = buildTrickPool();
+    if (!pool.length) {
+      panelEl.innerHTML = '<div class="subtitle">No tricks loaded.</div>';
+      return;
+    }
+    const picked = SRS.pickNext(pool);
+    loadTrick(picked);
+  }
+
+  function loadTrick(trick) {
+    game.reset();
+    let last = null;
+    for (const san of trick.setupMoves) {
+      const m = game.move(san, { sloppy: true });
+      if (m) last = { from: m.from, to: m.to };
+    }
+    board.setOrientation(trick.userColor);
+    board.setPosition(game.board(), last);
+    updateTurnIndicator();
+    modeState = {
+      trick,
+      complete: false,
+      mistakes: 0,
+      counted: false,
+      hintShown: false
+    };
+    renderPanel();
+  }
+
+  // The chess.js move() call only auto-promotes to queen. For tricks that
+  // expect underpromotion (e.g. Lasker Trap's fxg1=N+) we sniff the
+  // expected SAN to pick the right piece. Falls back to queen otherwise.
+  function inferPromotionPiece(trick) {
+    const expected = [trick.userMove, ...(trick.alternatives || [])].join(" ");
+    const m = /=([QRBN])/.exec(expected);
+    return m ? m[1].toLowerCase() : "q";
+  }
+
+  function handleTrickMoveAttempt({ from, to }) {
+    if (!modeState.trick || modeState.complete) return false;
+    const promotion = inferPromotionPiece(modeState.trick);
+    const m = game.move({ from, to, promotion });
+    if (!m) return false;
+    const expected = [modeState.trick.userMove, ...(modeState.trick.alternatives || [])];
+    const correct = expected.some(s => sansEqual(s, m.san));
+    board.setPosition(game.board(), { from: m.from, to: m.to });
+    updateTurnIndicator();
+    if (correct) {
+      modeState.complete = true;
+      modeState.lastUserSan = m.san;
+      if (!modeState.counted) {
+        modeState.counted = true;
+        const trickKey = "trick:" + modeState.trick.id;
+        const wasClean = modeState.mistakes === 0;
+        recordResult(trickKey, "trick", wasClean);
+        SRS.review(trickKey, wasClean ? "good" : "again");
+      }
+      renderPanel();
+      // Auto-play the continuation moves so the user sees the full payoff.
+      if (modeState.trick.continuation && modeState.trick.continuation.length) {
+        setTimeout(() => playTrickContinuation(0), 700);
+      }
+      return true;
+    } else {
+      // Undo so the user can try again from the same position.
+      game.undo();
+      board.setPosition(game.board(), null);
+      modeState.mistakes++;
+      const slot = panelEl.querySelector(".feedback-slot");
+      flashFeedback(slot, "Not the trick refutation — try again, or hit Show solution.", "bad");
+      return false;
+    }
+  }
+
+  function playTrickContinuation(idx) {
+    if (!modeState.trick || !modeState.complete) return;
+    const cont = modeState.trick.continuation || [];
+    if (idx >= cont.length) return;
+    const m = game.move(cont[idx], { sloppy: true });
+    if (!m) return;
+    board.setPosition(game.board(), { from: m.from, to: m.to });
+    updateTurnIndicator();
+    setTimeout(() => playTrickContinuation(idx + 1), 650);
+  }
+
+  function trickShowSolution() {
+    if (!modeState.trick || modeState.complete) return;
+    const trick = modeState.trick;
+    const promotion = inferPromotionPiece(trick);
+    // Parse the expected SAN via chess.js so promotion / disambiguation
+    // are handled correctly.
+    const m = game.move(trick.userMove, { sloppy: true });
+    if (!m) return;
+    modeState.complete = true;
+    modeState.mistakes = Math.max(modeState.mistakes, 1);
+    modeState.lastUserSan = m.san;
+    board.setPosition(game.board(), { from: m.from, to: m.to });
+    updateTurnIndicator();
+    if (!modeState.counted) {
+      modeState.counted = true;
+      const trickKey = "trick:" + trick.id;
+      recordResult(trickKey, "trick", false);
+      SRS.review(trickKey, "again");
+    }
+    renderPanel();
+    if (trick.continuation && trick.continuation.length) {
+      setTimeout(() => playTrickContinuation(0), 700);
+    }
+  }
+
+  function trickHint() {
+    if (!modeState.trick || modeState.complete) return;
+    const trick = modeState.trick;
+    // Resolve the user move via chess.js to get from/to without playing it.
+    const probe = new Chess(game.fen());
+    const m = probe.move(trick.userMove, { sloppy: true });
+    if (m) board.showHint(m.from);
+    modeState.hintShown = true;
+    modeState.mistakes = Math.max(modeState.mistakes, 1);
+  }
+
+  function renderTricksPanel() {
+    const trick = modeState.trick;
+    if (!trick) return;
+    panelEl.innerHTML = "";
+
+    const h = document.createElement("h2");
+    h.textContent = trick.category === "attack"
+      ? "Find the punishment"
+      : "Don't fall for it";
+    panelEl.appendChild(h);
+
+    const sub = document.createElement("div");
+    sub.className = "subtitle";
+    const turn = game.turn() === "w" ? "White" : "Black";
+    sub.textContent = modeState.complete
+      ? "Trick: " + trick.name
+      : `${turn} to move — find the ${trick.category === "attack" ? "winning" : "defensive"} move.`;
+    panelEl.appendChild(sub);
+
+    if (modeState.complete) {
+      const fb = document.createElement("div");
+      fb.className = "feedback info";
+      const catTag = trick.category === "attack"
+        ? `<span class="trick-tag trick-attack">Attack</span>`
+        : `<span class="trick-tag trick-defend">Defend</span>`;
+      const tierTag = `<span class="tier-pill tier-${trick.tier || "C"}">${trick.tier || "C"}</span>`;
+      const ecoTag = trick.eco ? `<span class="eco">${escapeHtml(trick.eco)}</span>` : "";
+      fb.innerHTML = `
+        <div class="trick-header">${ecoTag}<strong>${escapeHtml(trick.name)}</strong> ${catTag} ${tierTag}</div>
+        <div class="trick-desc">${escapeHtml(trick.description)}</div>
+        <div class="trick-why"><strong>Why:</strong> ${escapeHtml(trick.why || "")}</div>
+        <div class="moves-line">Line: ${formatNumberedSan([...trick.setupMoves, modeState.lastUserSan || trick.userMove, ...(trick.continuation || [])])}</div>
+      `;
+      panelEl.appendChild(fb);
+    } else {
+      const prompt = document.createElement("div");
+      prompt.className = "trick-prompt";
+      prompt.innerHTML = `<div>${escapeHtml(trick.description)}</div>`;
+      panelEl.appendChild(prompt);
+    }
+
+    const fbSlot = document.createElement("div");
+    fbSlot.className = "feedback-slot";
+    panelEl.appendChild(fbSlot);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+
+    if (!modeState.complete) {
+      const hint = document.createElement("button");
+      hint.className = "btn";
+      hint.textContent = "Hint";
+      hint.addEventListener("click", trickHint);
+      actions.appendChild(hint);
+
+      const sol = document.createElement("button");
+      sol.className = "btn";
+      sol.textContent = "Show solution";
+      sol.addEventListener("click", trickShowSolution);
+      actions.appendChild(sol);
+    }
+
+    const next = document.createElement("button");
+    next.className = "btn primary";
+    next.textContent = modeState.complete ? "Next trick →" : "Skip";
+    next.addEventListener("click", () => {
+      if (!modeState.complete && modeState.trick) {
+        recordResult("trick:" + modeState.trick.id, "trick", false);
+        SRS.review("trick:" + modeState.trick.id, "again");
+      }
+      nextTrick();
+    });
+    actions.appendChild(next);
+
+    panelEl.appendChild(actions);
+  }
+
   // ===== Stats blocks (inlined into the Practice panel) =====
 
   const ECO_FAMILY_LABELS = {
@@ -1071,6 +1284,7 @@
       if (modeState.questionType === "setup") return handleSetupMoveAttempt(move);
       if (modeState.questionType === "play" || modeState.questionType === "playmystery") return handlePlayMoveAttempt(move);
     }
+    if (currentMode === "tricks") return handleTrickMoveAttempt(move);
     if (currentMode === "explore") return handleExploreMoveAttempt(move);
     return false;
   }
@@ -1148,6 +1362,7 @@
       syncEngineToggleButton();
       return;
     }
+    if (currentMode === "tricks") return renderTricksPanel();
     if (currentMode === "explore") return renderExplorePanel();
   }
 

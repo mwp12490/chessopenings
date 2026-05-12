@@ -1365,6 +1365,44 @@ body {
   font-style: italic;
 }
 
+/* Tricks mode */
+.trick-prompt {
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+.trick-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.trick-desc { margin-bottom: 10px; line-height: 1.5; }
+.trick-why { margin-bottom: 10px; line-height: 1.5; color: var(--text-dim); }
+.trick-why strong { color: var(--text); }
+.trick-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.trick-tag.trick-attack {
+  background: rgba(245, 130, 65, 0.22);
+  color: #e8a070;
+  border: 1px solid #8a5c2c;
+}
+.trick-tag.trick-defend {
+  background: rgba(90, 169, 230, 0.22);
+  color: #7ab8e3;
+  border: 1px solid #3a6b94;
+}
+
 .acc-bar {
   width: 70px;
   height: 6px;
