@@ -1217,7 +1217,10 @@ body {
   margin-bottom: 0;
 }
 
-/* Elo slider */
+/* Elo study-range filter — two stacked <input type="range"> sliders.
+   The second slider sits on top of the first so both thumbs can be
+   grabbed; the tracks are made invisible on the overlay so the lower
+   slider's track is the only visible one. */
 .elo-filter {
   display: flex;
   align-items: center;
@@ -1228,18 +1231,61 @@ body {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-dim);
-  min-width: 38px;
+  min-width: 80px;
   text-align: right;
 }
+.elo-filter-sliders {
+  position: relative;
+  width: 160px;
+  height: 22px;
+  display: inline-block;
+}
 .elo-filter-slider {
-  width: 140px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  pointer-events: none; /* Re-enabled on the thumb only, below. */
+  -webkit-appearance: none;
+  appearance: none;
   accent-color: var(--accent);
+}
+.elo-filter-slider::-webkit-slider-thumb {
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-elev);
   cursor: pointer;
+}
+.elo-filter-slider::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-elev);
+  cursor: pointer;
+}
+.elo-filter-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+}
+.elo-filter-slider::-moz-range-track {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
 }
 .elo-filter-slider:disabled {
   opacity: 0.35;
-  cursor: not-allowed;
 }
+.elo-filter-slider:disabled::-webkit-slider-thumb { cursor: not-allowed; }
+.elo-filter-slider:disabled::-moz-range-thumb { cursor: not-allowed; }
 
 /* Tier filter row */
 .tier-filter {

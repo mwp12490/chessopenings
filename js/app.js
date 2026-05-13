@@ -74,8 +74,8 @@
   let showEngine = loadShowEngine();
   let tierFilter = loadTierFilter();
   let audienceFilter = loadAudienceFilter();
-  // Elo filter is either a number (1500 = "I'm rated ~1500, show me what's
-  // age-appropriate") or null when disabled.
+  // Elo filter is { min, max } when active (study openings whose level
+  // overlaps that range) or null when disabled.
   let eloFilter = loadEloFilter();
   renderScore();
 
@@ -226,56 +226,78 @@
     bar.appendChild(createEloFilter());
   }
 
-  // Elo slider — when set, narrows the rotation to openings whose
-  // audience flags overlap the user's rating. Combined with the audience
-  // checkboxes by AND. Slider has an explicit "Off" state on the left
-  // (rendered as no-thumb-position when null) and a "Clear" button.
+  // Elo range filter — the user picks the difficulty range they want to
+  // study (min and max). Combined with the audience checkboxes by AND.
+  // An opening passes when its inferred Elo coverage overlaps the chosen
+  // range. Two thumbs because HTML's <input type=range> is single-thumb
+  // only; layered in CSS to look like a dual-handle slider.
   function createEloFilter() {
     const wrap = document.createElement("div");
     wrap.className = "elo-filter";
     const active = eloFilter != null;
-    const value = active ? eloFilter : 1500;
+    const range = active ? eloFilter : { min: 1200, max: 2000 };
 
     const lbl = document.createElement("span");
     lbl.className = "tier-filter-label";
-    lbl.textContent = "Your Elo:";
+    lbl.textContent = "Study range:";
     wrap.appendChild(lbl);
 
     const valueEl = document.createElement("span");
     valueEl.className = "elo-filter-value";
-    valueEl.textContent = active ? String(value) : "(off)";
+    valueEl.textContent = active ? `${range.min}–${range.max}` : "(off)";
     wrap.appendChild(valueEl);
 
-    const slider = document.createElement("input");
-    slider.type = "range";
-    slider.className = "elo-filter-slider";
-    slider.min = "700";
-    slider.max = "2800";
-    slider.step = "50";
-    slider.value = String(value);
-    slider.title = "Drag to your rating — openings outside that level are filtered out";
-    slider.disabled = !active;
-    slider.addEventListener("input", () => {
-      const n = parseInt(slider.value, 10);
-      eloFilter = n;
-      valueEl.textContent = String(n);
+    const sliders = document.createElement("span");
+    sliders.className = "elo-filter-sliders";
+
+    const minSlider = document.createElement("input");
+    const maxSlider = document.createElement("input");
+    for (const s of [minSlider, maxSlider]) {
+      s.type = "range";
+      s.className = "elo-filter-slider";
+      s.min = "700";
+      s.max = "2800";
+      s.step = "50";
+      s.disabled = !active;
+    }
+    minSlider.value = String(range.min);
+    maxSlider.value = String(range.max);
+    minSlider.title = "Low end of the study range";
+    maxSlider.title = "High end of the study range";
+
+    const onInput = () => {
+      let lo = parseInt(minSlider.value, 10);
+      let hi = parseInt(maxSlider.value, 10);
+      // Keep the handles from crossing — the dragged one wins; clamp the
+      // other to its side.
+      if (lo > hi) {
+        if (document.activeElement === minSlider) hi = lo;
+        else lo = hi;
+        minSlider.value = String(lo);
+        maxSlider.value = String(hi);
+      }
+      eloFilter = { min: lo, max: hi };
+      valueEl.textContent = `${lo}–${hi}`;
       saveEloFilter();
-    });
-    slider.addEventListener("change", () => {
-      // After a drag settles, re-evaluate the current card against the
-      // new filter (auto-advance if it no longer fits).
-      applyFilterChange();
-    });
-    wrap.appendChild(slider);
+    };
+    const onChange = () => applyFilterChange();
+    minSlider.addEventListener("input", onInput);
+    maxSlider.addEventListener("input", onInput);
+    minSlider.addEventListener("change", onChange);
+    maxSlider.addEventListener("change", onChange);
+
+    sliders.appendChild(minSlider);
+    sliders.appendChild(maxSlider);
+    wrap.appendChild(sliders);
 
     const toggle = document.createElement("button");
     toggle.className = "tier-filter-bulk";
     toggle.textContent = active ? "Off" : "On";
     toggle.title = active
-      ? "Disable the Elo filter"
-      : "Enable the Elo filter and use the slider";
+      ? "Disable the study-range filter"
+      : "Enable the study-range filter and pick a low / high end";
     toggle.addEventListener("click", () => {
-      if (eloFilter == null) eloFilter = 1500;
+      if (eloFilter == null) eloFilter = { min: 1200, max: 2000 };
       else eloFilter = null;
       saveEloFilter();
       renderFilterBar();
@@ -2668,8 +2690,17 @@
     try {
       const raw = localStorage.getItem(ELO_FILTER_KEY);
       if (raw == null) return null;
+      // Older builds stored a single number ("your rating"). Treat that
+      // as a tight range around the number so the user's intent isn't
+      // silently dropped on upgrade.
       const n = parseInt(raw, 10);
-      if (Number.isFinite(n) && n >= 600 && n <= 3000) return n;
+      if (Number.isFinite(n) && /^\s*\d+\s*$/.test(raw)) {
+        return clampEloRange({ min: n - 200, max: n + 200 });
+      }
+      const obj = JSON.parse(raw);
+      if (obj && typeof obj === "object" && Number.isFinite(obj.min) && Number.isFinite(obj.max)) {
+        return clampEloRange(obj);
+      }
     } catch (e) {}
     return null;
   }
@@ -2677,10 +2708,16 @@
   function saveEloFilter() {
     try {
       if (eloFilter == null) localStorage.removeItem(ELO_FILTER_KEY);
-      else localStorage.setItem(ELO_FILTER_KEY, String(eloFilter));
+      else localStorage.setItem(ELO_FILTER_KEY, JSON.stringify(eloFilter));
     } catch (e) {}
     if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
     if (typeof localBackupWriteDebounced === "function") localBackupWriteDebounced();
+  }
+
+  function clampEloRange(r) {
+    const min = Math.max(700, Math.min(2800, r.min | 0));
+    const max = Math.max(700, Math.min(2800, r.max | 0));
+    return { min: Math.min(min, max), max: Math.max(min, max) };
   }
 
   function openingMatchesAudience(o) {
@@ -2708,7 +2745,9 @@
     if (eloFilter == null) return true;
     const range = openingEloRange(o);
     if (!range) return false;
-    return eloFilter >= range[0] && eloFilter <= range[1];
+    // Overlap test: the opening's level coverage must intersect the
+    // user's chosen study range.
+    return range[1] >= eloFilter.min && range[0] <= eloFilter.max;
   }
 
   function getFilteredOpeningPool() {
