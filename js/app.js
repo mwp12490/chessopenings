@@ -250,6 +250,16 @@
     const sliders = document.createElement("span");
     sliders.className = "elo-filter-sliders";
 
+    // Visible track + colored fill between the two thumbs. The two range
+    // inputs are layered on top with transparent tracks so only their
+    // thumbs show — the fill bar communicates the selected interval.
+    const trackEl = document.createElement("span");
+    trackEl.className = "elo-filter-track";
+    sliders.appendChild(trackEl);
+    const fillEl = document.createElement("span");
+    fillEl.className = "elo-filter-fill";
+    sliders.appendChild(fillEl);
+
     const minSlider = document.createElement("input");
     const maxSlider = document.createElement("input");
     for (const s of [minSlider, maxSlider]) {
@@ -265,11 +275,18 @@
     minSlider.title = "Low end of the study range";
     maxSlider.title = "High end of the study range";
 
+    function updateFill(lo, hi) {
+      const span = 2800 - 700;
+      const minPct = ((lo - 700) / span) * 100;
+      const maxPct = ((hi - 700) / span) * 100;
+      fillEl.style.left = minPct + "%";
+      fillEl.style.right = (100 - maxPct) + "%";
+    }
+    updateFill(range.min, range.max);
+
     const onInput = () => {
       let lo = parseInt(minSlider.value, 10);
       let hi = parseInt(maxSlider.value, 10);
-      // Keep the handles from crossing — the dragged one wins; clamp the
-      // other to its side.
       if (lo > hi) {
         if (document.activeElement === minSlider) hi = lo;
         else lo = hi;
@@ -278,6 +295,7 @@
       }
       eloFilter = { min: lo, max: hi };
       valueEl.textContent = `${lo}–${hi}`;
+      updateFill(lo, hi);
       saveEloFilter();
     };
     const onChange = () => applyFilterChange();

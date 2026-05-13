@@ -1217,10 +1217,9 @@ body {
   margin-bottom: 0;
 }
 
-/* Elo study-range filter — two stacked <input type="range"> sliders.
-   The second slider sits on top of the first so both thumbs can be
-   grabbed; the tracks are made invisible on the overlay so the lower
-   slider's track is the only visible one. */
+/* Elo study-range filter — two stacked <input type="range"> sliders
+   sharing one styled track + a fill bar between the thumbs. The native
+   tracks are made transparent so only the colored fill is visible. */
 .elo-filter {
   display: flex;
   align-items: center;
@@ -1240,16 +1239,42 @@ body {
   height: 22px;
   display: inline-block;
 }
+.elo-filter-track,
+.elo-filter-fill {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+.elo-filter-track {
+  left: 0;
+  right: 0;
+  background: var(--border);
+}
+.elo-filter-fill {
+  background: var(--accent);
+}
 .elo-filter-slider {
   position: absolute;
   inset: 0;
   width: 100%;
   margin: 0;
   background: transparent;
-  pointer-events: none; /* Re-enabled on the thumb only, below. */
+  pointer-events: none;
   -webkit-appearance: none;
   appearance: none;
-  accent-color: var(--accent);
+}
+.elo-filter-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+  border: none;
+}
+.elo-filter-slider::-moz-range-track {
+  height: 4px;
+  background: transparent;
+  border: none;
 }
 .elo-filter-slider::-webkit-slider-thumb {
   pointer-events: auto;
@@ -1260,7 +1285,9 @@ body {
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid var(--bg-elev);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.25);
   cursor: pointer;
+  margin-top: -5px;
 }
 .elo-filter-slider::-moz-range-thumb {
   pointer-events: auto;
@@ -1269,21 +1296,10 @@ body {
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid var(--bg-elev);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.25);
   cursor: pointer;
 }
-.elo-filter-slider::-webkit-slider-runnable-track {
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-}
-.elo-filter-slider::-moz-range-track {
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-}
-.elo-filter-slider:disabled {
-  opacity: 0.35;
-}
+.elo-filter-slider:disabled { opacity: 0.4; }
 .elo-filter-slider:disabled::-webkit-slider-thumb { cursor: not-allowed; }
 .elo-filter-slider:disabled::-moz-range-thumb { cursor: not-allowed; }
 
