@@ -140,7 +140,10 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, auto) minmax(320px, 1fr);
+  /* minmax(280px, ...) lets the right column squeeze a bit on half-screens
+     while still holding the panel content. The board is sized below to
+     leave room for it. */
+  grid-template-columns: minmax(0, auto) minmax(280px, 1fr);
   gap: 24px;
   padding: 24px;
   flex: 1;
@@ -150,9 +153,15 @@ body {
   margin: 0 auto;
 }
 
-@media (max-width: 900px) {
+/* Single-column only below ~650px (phones / very narrow). At typical
+   half-screen widths on laptops (640-960px) the board shrinks instead so
+   the panel stays beside it — no scrolling past the board to find the
+   question. */
+@media (max-width: 650px) {
   .layout {
     grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
   }
 }
 
@@ -164,8 +173,19 @@ body {
 
 .board-shell {
   position: relative;
-  width: min(560px, 90vw);
+  /* Width is bounded by: the desktop max (560px), the room left after the
+     panel column (280px + 24 gap + 48 layout padding ≈ 352), and the
+     viewport height (80vh) so the board never pushes the panel below the
+     fold on short windows. */
+  width: min(560px, calc(100vw - 360px), 80vh);
   aspect-ratio: 1 / 1;
+}
+@media (max-width: 650px) {
+  .board-shell {
+    /* Single-column: board can use most of the width, capped so the
+       panel below is still visible without scrolling much. */
+    width: min(560px, 92vw, 55vh);
+  }
 }
 
 .board {
@@ -1028,9 +1048,12 @@ body {
   background: var(--border);
 }
 
-/* On wide layouts, lock the page to the viewport so only the right panel
-   scrolls. Mobile/narrow keeps native page scroll. */
-@media (min-width: 900px) {
+/* On wide-enough layouts, lock the page to the viewport so only the right
+   panel scrolls. The previous 900px breakpoint meant half-screen widths
+   (640-900px) fell back to page-scroll with the panel below the board,
+   forcing the user to scroll past the board to see questions.
+   Two-column kicks in down to 651px now. */
+@media (min-width: 651px) {
   body {
     height: 100vh;
     overflow: hidden;
@@ -1068,8 +1091,9 @@ body {
 
 /* Push the inline progress stats below the panel's visible fold so they
    only appear when the user scrolls down (only meaningful at desktop sizes
-   where the right column is its own scroll area). */
-@media (min-width: 900px) {
+   where the right column is its own scroll area). Matches the two-column
+   breakpoint above. */
+@media (min-width: 651px) {
   .panel-practice {
     min-height: calc(100vh - 200px);
     display: flex;
@@ -1188,8 +1212,33 @@ body {
 }
 .filterbar.hidden { display: none; }
 .filterbar .tier-filter,
-.filterbar .audience-filter {
+.filterbar .audience-filter,
+.filterbar .elo-filter {
   margin-bottom: 0;
+}
+
+/* Elo slider */
+.elo-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.elo-filter-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  min-width: 38px;
+  text-align: right;
+}
+.elo-filter-slider {
+  width: 140px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.elo-filter-slider:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 /* Tier filter row */

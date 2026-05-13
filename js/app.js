@@ -66,6 +66,7 @@
   const SHOW_ENGINE_KEY = "chess-openings-trainer.show-engine";
   const TIER_FILTER_KEY = "chess-openings-trainer.tier-filter";
   const AUDIENCE_FILTER_KEY = "chess-openings-trainer.audience-filter";
+  const ELO_FILTER_KEY = "chess-openings-trainer.elo-filter";
   // Score is per-session — not persisted across launches. Each graded
   // question attempt is one tally: denominator bumped by 1, numerator by
   // 1 if correct.
@@ -73,6 +74,9 @@
   let showEngine = loadShowEngine();
   let tierFilter = loadTierFilter();
   let audienceFilter = loadAudienceFilter();
+  // Elo filter is either a number (1500 = "I'm rated ~1500, show me what's
+  // age-appropriate") or null when disabled.
+  let eloFilter = loadEloFilter();
   renderScore();
 
   validateOpenings();
@@ -219,6 +223,67 @@
     bar.classList.remove("hidden");
     bar.appendChild(createTierFilter());
     bar.appendChild(createAudienceFilter());
+    bar.appendChild(createEloFilter());
+  }
+
+  // Elo slider — when set, narrows the rotation to openings whose
+  // audience flags overlap the user's rating. Combined with the audience
+  // checkboxes by AND. Slider has an explicit "Off" state on the left
+  // (rendered as no-thumb-position when null) and a "Clear" button.
+  function createEloFilter() {
+    const wrap = document.createElement("div");
+    wrap.className = "elo-filter";
+    const active = eloFilter != null;
+    const value = active ? eloFilter : 1500;
+
+    const lbl = document.createElement("span");
+    lbl.className = "tier-filter-label";
+    lbl.textContent = "Your Elo:";
+    wrap.appendChild(lbl);
+
+    const valueEl = document.createElement("span");
+    valueEl.className = "elo-filter-value";
+    valueEl.textContent = active ? String(value) : "(off)";
+    wrap.appendChild(valueEl);
+
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.className = "elo-filter-slider";
+    slider.min = "700";
+    slider.max = "2800";
+    slider.step = "50";
+    slider.value = String(value);
+    slider.title = "Drag to your rating — openings outside that level are filtered out";
+    slider.disabled = !active;
+    slider.addEventListener("input", () => {
+      const n = parseInt(slider.value, 10);
+      eloFilter = n;
+      valueEl.textContent = String(n);
+      saveEloFilter();
+    });
+    slider.addEventListener("change", () => {
+      // After a drag settles, re-evaluate the current card against the
+      // new filter (auto-advance if it no longer fits).
+      applyFilterChange();
+    });
+    wrap.appendChild(slider);
+
+    const toggle = document.createElement("button");
+    toggle.className = "tier-filter-bulk";
+    toggle.textContent = active ? "Off" : "On";
+    toggle.title = active
+      ? "Disable the Elo filter"
+      : "Enable the Elo filter and use the slider";
+    toggle.addEventListener("click", () => {
+      if (eloFilter == null) eloFilter = 1500;
+      else eloFilter = null;
+      saveEloFilter();
+      renderFilterBar();
+      applyFilterChange();
+    });
+    wrap.appendChild(toggle);
+
+    return wrap;
   }
 
   // ===== Practice Mode (mixed identify + setup) =====
@@ -1560,7 +1625,8 @@
     "chess-openings-trainer.srs",
     "chess-openings-trainer.show-engine",
     "chess-openings-trainer.tier-filter",
-    "chess-openings-trainer.audience-filter"
+    "chess-openings-trainer.audience-filter",
+    "chess-openings-trainer.elo-filter"
   ];
   const SYNC_FOLDER_KEY = "chess-openings-trainer.sync-folder";
   const SYNC_LAST_TS_KEY = "chess-openings-trainer.sync-ts";
@@ -2598,6 +2664,25 @@
     if (typeof localBackupWriteDebounced === "function") localBackupWriteDebounced();
   }
 
+  function loadEloFilter() {
+    try {
+      const raw = localStorage.getItem(ELO_FILTER_KEY);
+      if (raw == null) return null;
+      const n = parseInt(raw, 10);
+      if (Number.isFinite(n) && n >= 600 && n <= 3000) return n;
+    } catch (e) {}
+    return null;
+  }
+
+  function saveEloFilter() {
+    try {
+      if (eloFilter == null) localStorage.removeItem(ELO_FILTER_KEY);
+      else localStorage.setItem(ELO_FILTER_KEY, String(eloFilter));
+    } catch (e) {}
+    if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
+    if (typeof localBackupWriteDebounced === "function") localBackupWriteDebounced();
+  }
+
   function openingMatchesAudience(o) {
     if (audienceFilter.size === 0) return true;
     if (audienceFilter.has("beginner") && o.beginnerFriendly) return true;
@@ -2606,9 +2691,29 @@
     return false;
   }
 
+  // Each opening covers an Elo range derived from its audience flags.
+  // Ranges overlap so a Beginner+Intermediate opening covers everyone
+  // from a beginner through a strong club player. An opening with no
+  // audience flag (rare — only dubious / very offbeat lines) is treated
+  // as covering nothing, so the Elo filter excludes it.
+  function openingEloRange(o) {
+    let lo = Infinity, hi = -Infinity;
+    if (o.beginnerFriendly) { lo = Math.min(lo, 700);  hi = Math.max(hi, 1700); }
+    if (o.intermediateFriendly) { lo = Math.min(lo, 1300); hi = Math.max(hi, 2300); }
+    if (o.gmFriendly) { lo = Math.min(lo, 2100); hi = Math.max(hi, 3000); }
+    return lo <= hi ? [lo, hi] : null;
+  }
+
+  function openingMatchesElo(o) {
+    if (eloFilter == null) return true;
+    const range = openingEloRange(o);
+    if (!range) return false;
+    return eloFilter >= range[0] && eloFilter <= range[1];
+  }
+
   function getFilteredOpeningPool() {
     const filtered = OPENINGS.filter(o =>
-      tierFilter.has(o.tier || "C") && openingMatchesAudience(o)
+      tierFilter.has(o.tier || "C") && openingMatchesAudience(o) && openingMatchesElo(o)
     );
     // Defensive: if the combined filter ends up empty, fall back to all.
     return filtered.length ? filtered : OPENINGS;
