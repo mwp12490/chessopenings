@@ -1212,9 +1212,62 @@ body {
 }
 .filterbar.hidden { display: none; }
 .filterbar .tier-filter,
+.filterbar .side-filter,
 .filterbar .audience-filter,
 .filterbar .elo-filter {
   margin-bottom: 0;
+}
+
+/* Side (White / Black) filter — same shape as the audience pills. */
+.side-filter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.side-filter-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+.side-filter-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.side-filter-btn.active.side-white {
+  background: rgba(255, 255, 255, 0.85);
+  color: #1a1a1a;
+  border-color: rgba(255, 255, 255, 0.85);
+}
+.side-filter-btn.active.side-black {
+  background: #1a1a1a;
+  color: #eee;
+  border-color: #444;
+}
+
+/* Inferred-Elo-range pill on per-opening stats rows */
+.elo-range-pill {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.elo-range-pill.elo-range-none {
+  font-style: italic;
 }
 
 /* Elo study-range filter — two stacked <input type="range"> sliders

@@ -66,6 +66,7 @@
   const SHOW_ENGINE_KEY = "chess-openings-trainer.show-engine";
   const TIER_FILTER_KEY = "chess-openings-trainer.tier-filter";
   const AUDIENCE_FILTER_KEY = "chess-openings-trainer.audience-filter";
+  const SIDE_FILTER_KEY = "chess-openings-trainer.side-filter";
   const ELO_FILTER_KEY = "chess-openings-trainer.elo-filter";
   // Score is per-session — not persisted across launches. Each graded
   // question attempt is one tally: denominator bumped by 1, numerator by
@@ -74,6 +75,9 @@
   let showEngine = loadShowEngine();
   let tierFilter = loadTierFilter();
   let audienceFilter = loadAudienceFilter();
+  // Side filter: Set of "white" / "black". Both selected = no constraint.
+  // The last enabled side can't be toggled off (would leave nothing).
+  let sideFilter = loadSideFilter();
   // Elo filter is { min, max } when active (study openings whose level
   // overlaps that range) or null when disabled.
   let eloFilter = loadEloFilter();
@@ -222,8 +226,40 @@
     }
     bar.classList.remove("hidden");
     bar.appendChild(createTierFilter());
+    bar.appendChild(createSideFilter());
     bar.appendChild(createAudienceFilter());
     bar.appendChild(createEloFilter());
+  }
+
+  // Side filter: choose to study only White's openings, only Black's, or
+  // both. Mirrors the tier filter pattern.
+  function createSideFilter() {
+    const wrap = document.createElement("div");
+    wrap.className = "side-filter";
+    const lbl = document.createElement("span");
+    lbl.className = "tier-filter-label";
+    lbl.textContent = "Side:";
+    wrap.appendChild(lbl);
+    for (const s of [{ key: "white", label: "White" }, { key: "black", label: "Black" }]) {
+      const btn = document.createElement("button");
+      btn.className = "side-filter-btn side-" + s.key + (sideFilter.has(s.key) ? " active" : "");
+      btn.dataset.side = s.key;
+      btn.textContent = s.label;
+      btn.title = "Toggle " + s.label + "'s openings in the rotation";
+      btn.addEventListener("click", () => {
+        if (sideFilter.has(s.key)) {
+          // Don't let the user disable both — keeps the rotation alive.
+          if (sideFilter.size > 1) sideFilter.delete(s.key);
+        } else {
+          sideFilter.add(s.key);
+        }
+        saveSideFilter();
+        renderFilterBar();
+        applyFilterChange();
+      });
+      wrap.appendChild(btn);
+    }
+    return wrap;
   }
 
   // Elo range filter — the user picks the difficulty range they want to
@@ -1666,6 +1702,7 @@
     "chess-openings-trainer.show-engine",
     "chess-openings-trainer.tier-filter",
     "chess-openings-trainer.audience-filter",
+    "chess-openings-trainer.side-filter",
     "chess-openings-trainer.elo-filter"
   ];
   const SYNC_FOLDER_KEY = "chess-openings-trainer.sync-folder";
@@ -1974,11 +2011,16 @@
         const pct = Math.round(accuracy);
         const cls = pct >= 80 ? "acc-good" : (pct >= 50 ? "acc-mid" : "acc-bad");
         const tier = opening.tier || "C";
+        const eloR = openingEloRange(opening);
+        const eloPill = eloR
+          ? `<span class="elo-range-pill" title="Inferred study range from this opening's audience flags">${eloR[0]}–${eloR[1]}</span>`
+          : `<span class="elo-range-pill elo-range-none" title="No audience flags — no inferred Elo range">—</span>`;
         return `
           <div class="hard-row">
             <span class="eco">${opening.eco}</span>
             <span class="tier-pill tier-${tier}" title="Tier ${tier}">${tier}</span>
             <span class="hard-name">${escapeHtml(opening.name)}</span>
+            ${eloPill}
             <span class="acc-bar"><span class="acc-bar-fill ${cls}" style="width:${pct}%"></span></span>
             <span class="hard-meta acc-meta ${cls}">${successes}/${total} · ${pct}%</span>
           </div>`;
@@ -2704,6 +2746,30 @@
     if (typeof localBackupWriteDebounced === "function") localBackupWriteDebounced();
   }
 
+  function loadSideFilter() {
+    try {
+      const raw = localStorage.getItem(SIDE_FILTER_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length) {
+          const allowed = new Set(arr.filter(s => s === "white" || s === "black"));
+          if (allowed.size) return allowed;
+        }
+      }
+    } catch (e) {}
+    return new Set(["white", "black"]);
+  }
+
+  function saveSideFilter() {
+    try { localStorage.setItem(SIDE_FILTER_KEY, JSON.stringify([...sideFilter])); } catch (e) {}
+    if (typeof autoSyncWriteDebounced === "function") autoSyncWriteDebounced();
+    if (typeof localBackupWriteDebounced === "function") localBackupWriteDebounced();
+  }
+
+  function openingMatchesSide(o) {
+    return sideFilter.has(openingSide(o).toLowerCase());
+  }
+
   function loadEloFilter() {
     try {
       const raw = localStorage.getItem(ELO_FILTER_KEY);
@@ -2770,7 +2836,10 @@
 
   function getFilteredOpeningPool() {
     const filtered = OPENINGS.filter(o =>
-      tierFilter.has(o.tier || "C") && openingMatchesAudience(o) && openingMatchesElo(o)
+      tierFilter.has(o.tier || "C")
+      && openingMatchesSide(o)
+      && openingMatchesAudience(o)
+      && openingMatchesElo(o)
     );
     // Defensive: if the combined filter ends up empty, fall back to all.
     return filtered.length ? filtered : OPENINGS;
