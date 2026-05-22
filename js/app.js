@@ -94,7 +94,46 @@
     }
   });
   board.setPosition(game.board(), null);
+  board.onMoveSound = playMoveSound;
   updateTurnIndicator();
+
+  // Web-Audio synthesized "click" sound on every piece move. Two
+  // overlapping voices: a low-frequency thud for body, a high-frequency
+  // tick for the attack — together they read as a wooden piece tap.
+  // The AudioContext is created lazily on first move (browser autoplay
+  // policy needs a user gesture, which piece moves naturally are).
+  let _audioCtx = null;
+  function playMoveSound() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!_audioCtx) _audioCtx = new AC();
+      if (_audioCtx.state === "suspended") _audioCtx.resume().catch(() => {});
+      const ctx = _audioCtx;
+      const t = ctx.currentTime;
+
+      const thud = ctx.createOscillator();
+      const thudGain = ctx.createGain();
+      thud.type = "sine";
+      thud.frequency.setValueAtTime(180, t);
+      thud.frequency.exponentialRampToValueAtTime(70, t + 0.07);
+      thudGain.gain.setValueAtTime(0.18, t);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      thud.connect(thudGain).connect(ctx.destination);
+      thud.start(t);
+      thud.stop(t + 0.1);
+
+      const click = ctx.createOscillator();
+      const clickGain = ctx.createGain();
+      click.type = "triangle";
+      click.frequency.setValueAtTime(2400, t);
+      clickGain.gain.setValueAtTime(0.07, t);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+      click.connect(clickGain).connect(ctx.destination);
+      click.start(t);
+      click.stop(t + 0.035);
+    } catch (e) { /* audio failure is non-fatal */ }
+  }
 
   const engine = new Engine();
   engine.onStatus(({ state, msg }) => {
@@ -435,7 +474,7 @@
       || (Math.random() < 0.5 ? "white" : "black");
     if (historyEntry) historyEntry.orientation = orientation;
     if (board.orientation !== orientation) board.setOrientation(orientation);
-    board.setPosition(game.board(), lastMove);
+    board.setPosition(game.board(), lastMove, { silent: true });
     updateTurnIndicator();
 
     const distractors = getRandomOpenings(5, opening, getFilteredOpeningPool());
@@ -1062,7 +1101,7 @@
       if (m) last = { from: m.from, to: m.to };
     }
     board.setOrientation(trick.userColor);
-    board.setPosition(game.board(), last);
+    board.setPosition(game.board(), last, { silent: true });
     updateTurnIndicator();
     modeState = {
       trick,

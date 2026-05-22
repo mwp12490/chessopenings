@@ -164,12 +164,22 @@ class ChessBoard {
   }
 
   // boardState is 2D array from chess.js: rows[0] = rank 8, rows[7] = rank 1.
-  setPosition(boardState, lastMove) {
+  // opts.silent suppresses the move-sound hook (use for card loads where
+  // the position changes but it's not a "piece was just moved" event).
+  setPosition(boardState, lastMove, opts) {
+    const prev = this.lastMove;
     this.boardState = boardState;
     this.lastMove = lastMove || null;
     this.selected = null;
     this.clearEngineArrow();
     this._render();
+    const silent = opts && opts.silent;
+    const changed = this.lastMove && (!prev
+      || prev.from !== this.lastMove.from
+      || prev.to !== this.lastMove.to);
+    if (!silent && changed && typeof this.onMoveSound === "function") {
+      try { this.onMoveSound(this.lastMove); } catch (e) {}
+    }
   }
 
   _pieceAt(square) {
