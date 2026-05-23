@@ -253,13 +253,15 @@
     renderPanel();
   }
 
-  // Filter bar (tier + audience pills) lives in its own strip directly
-  // below the topbar — only visible in Practice mode.
+  // Filter bar (tier + side + audience + Elo) lives in its own strip
+  // directly below the topbar. Shown in Practice and Explore (it
+  // determines the rotation in Practice and the list contents in
+  // Explore). Hidden in Tricks since trick selection has its own logic.
   function renderFilterBar() {
     const bar = document.getElementById("filterbar");
     if (!bar) return;
     bar.innerHTML = "";
-    if (currentMode !== "practice") {
+    if (currentMode !== "practice" && currentMode !== "explore") {
       bar.classList.add("hidden");
       return;
     }
@@ -2473,14 +2475,20 @@
     const q = (state.query || "").trim().toLowerCase();
     const items = OPENINGS
       .map((o, i) => ({ o, i }))
+      .filter(({ o }) =>
+        tierFilter.has(o.tier || "C")
+        && openingMatchesSide(o)
+        && openingMatchesAudience(o)
+        && openingMatchesElo(o))
       .filter(({ o }) => !q ||
         o.name.toLowerCase().includes(q) ||
         o.eco.toLowerCase().includes(q) ||
         (o.aliases || []).some(a => a.toLowerCase().includes(q)));
-    if (items.length === 0) return '<div class="opening-item">No matches</div>';
+    if (items.length === 0) return '<div class="opening-item">No matches — relax a filter above or clear the search.</div>';
     return items.map(({ o, i }) => {
       const sel = state.selected && state.selected.name === o.name ? " selected" : "";
-      return `<div class="opening-item${sel}" data-idx="${i}"><span class="eco">${o.eco}</span>${escapeHtml(o.name)}</div>`;
+      const tier = o.tier || "C";
+      return `<div class="opening-item${sel}" data-idx="${i}"><span class="eco">${o.eco}</span><span class="tier-pill tier-${tier}" title="Tier ${tier}">${tier}</span>${escapeHtml(o.name)}</div>`;
     }).join("");
   }
 
