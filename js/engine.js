@@ -36,13 +36,14 @@ class Engine {
       this._setStatus("ready", this.engineLabel + " ready");
     } catch (err) {
       // Fallback path: SF 10 asm.js worker, which works without SAB.
+      const failureMsg = (err && err.message) ? err.message : String(err);
       console.warn("SF 16 init failed, falling back to SF 10:", err);
       try {
         await this._initLegacy();
         this.ready = true;
         this.usingLegacy = true;
-        this.engineLabel = "Stockfish 10 (fallback)";
-        this._setStatus("ready", this.engineLabel + " ready");
+        this.engineLabel = "Stockfish 10 (fallback: " + failureMsg + ")";
+        this._setStatus("ready", "Stockfish 10 (fallback — SF 16 failed: " + failureMsg + ")");
       } catch (err2) {
         this._setStatus("error", "Stockfish unavailable: " + (err2.message || err2));
         throw err2;
@@ -56,9 +57,11 @@ class Engine {
     const mod = await import(SF_LOADER_PATH);
     const Sf167Web = mod.default;
     this.sf = await Sf167Web({
-      // SF resolves sf16-7.wasm via this callback. URL is relative to the
-      // SF .js module, which lives in vendor/sf16/.
-      locateFile: (file) => file,
+      // SF's default locateFile would prepend its own scriptDirectory
+      // (= the SF module URL's directory). We use the same — passing
+      // (file, scriptDirectory) and concatenating ensures the .wasm load
+      // resolves to vendor/sf16/sf16-7.wasm and not document-root.
+      locateFile: (file, scriptDirectory) => scriptDirectory + file,
       listen: (line) => this._onMessage(line),
       onError: (msg) => console.error("SF error:", msg)
     });
