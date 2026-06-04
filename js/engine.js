@@ -29,6 +29,26 @@ class Engine {
   }
 
   async init() {
+    // Cheap pre-flight: SF 16 needs SharedArrayBuffer (multi-threaded
+    // pthread workers). If the renderer isn't cross-origin isolated for
+    // whatever reason, skip SF 16 entirely so we don't hang for 10s on
+    // an init that can't possibly succeed.
+    const sabAvailable = (typeof SharedArrayBuffer !== "undefined")
+      && (typeof crossOriginIsolated === "undefined" || crossOriginIsolated === true);
+    if (!sabAvailable) {
+      this._setStatus("loading", "Loading Stockfish 10 (no SAB)…");
+      try {
+        await this._initLegacy();
+        this.ready = true;
+        this.usingLegacy = true;
+        this.engineLabel = "Stockfish 10 (no SharedArrayBuffer)";
+        this._setStatus("ready", this.engineLabel + " ready");
+      } catch (err2) {
+        this._setStatus("error", "Stockfish unavailable: " + (err2.message || err2));
+        throw err2;
+      }
+      return;
+    }
     this._setStatus("loading", "Loading Stockfish 16 NNUE…");
     try {
       await this._initLilaSf();
@@ -73,9 +93,9 @@ class Engine {
     this.sf.setNnueBuffer(new Uint8Array(buf));
 
     this.sf.uci("uci");
-    await this._waitFor((line) => line === "uciok", 10000);
+    await this._waitFor((line) => line === "uciok", 6000);
     this.sf.uci("isready");
-    await this._waitFor((line) => line === "readyok", 10000);
+    await this._waitFor((line) => line === "readyok", 6000);
 
     // Use most cores but keep one free for the renderer/UI.
     const threads = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 1) - 1));
