@@ -266,6 +266,24 @@ const OPENINGS = [
     tier: "D",
     popularity: 1
   },
+  {
+    name: "Sicilian Rossolimo",
+    eco: "B30",
+    moves: ["e4","c5","Nf3","Nc6","Bb5"],
+    description: "Anti-Sicilian system — White pins the c6 knight and sidesteps the Open Sicilian's huge body of theory.",
+    assessment: "Massively popular at every level since the 2010s — Carlsen, Caruana, and Nakamura all use it. Leads to quiet positional play with a small but durable edge for White.",
+    tier: "A",
+    popularity: 4
+  },
+  {
+    name: "Moscow Variation",
+    eco: "B51",
+    moves: ["e4","c5","Nf3","d6","Bb5+"],
+    description: "Anti-Sicilian system — Bb5+ on move 3 against ...d6, sidestepping Najdorf and Dragon theory entirely.",
+    assessment: "Modern top-level players' go-to when they don't want to memorize forty moves of Najdorf. Forces Black into a less ambitious setup than the main Sicilian.",
+    tier: "A",
+    popularity: 4
+  },
 
   // ===== French / Caro / Other 1.e4 =====
   {
@@ -375,6 +393,24 @@ const OPENINGS = [
     description: "An ultra-flexible hypermodern setup with the king's fianchetto.",
     assessment: "Maximum move-order flexibility — Black can transpose to Pirc, King's Indian, or Modern structures. Sound but slightly passive without precise follow-up.",
     tier: "C",
+    popularity: 2
+  },
+  {
+    name: "Austrian Attack",
+    eco: "B09",
+    moves: ["e4","d6","d4","Nf6","Nc3","g6","f4"],
+    description: "Aggressive anti-Pirc system — White builds a huge pawn center with f4 and aims for a kingside attack.",
+    assessment: "The most ambitious challenge to the Pirc — direct, sharp, theory-heavy. If White's center holds, Black is positionally lost; if it cracks, White has overextended.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "150 Attack",
+    eco: "B07",
+    moves: ["e4","d6","d4","Nf6","Nc3","g6","Be3"],
+    description: "Modern anti-Pirc / anti-Modern setup — White plans Qd2, O-O-O, and a kingside pawn storm.",
+    assessment: "Named after the English 150-point club rating — easy to play with one clear plan (Qd2, h4-h5, O-O-O). Considered a serious challenge to the Pirc that doesn't require deep theory.",
+    tier: "B",
     popularity: 2
   },
   {
@@ -799,6 +835,24 @@ const OPENINGS = [
 
   // Caro-Kann sub-variations
   {
+    name: "Caro-Kann Fantasy Variation",
+    eco: "B12",
+    moves: ["e4","c6","d4","d5","f3"],
+    description: "Aggressive anti-Caro-Kann — White supports the e4 pawn with f3 and prepares a kingside attack.",
+    assessment: "Sharp and uncompromising. Popularized by Bronstein and revived by Karjakin; pressures Black to know precise theory or get crushed early.",
+    tier: "B",
+    popularity: 2
+  },
+  {
+    name: "Caro-Kann Exchange",
+    eco: "B13",
+    moves: ["e4","c6","d4","d5","exd5","cxd5"],
+    description: "White trades central tension immediately, leaving a symmetrical pawn structure.",
+    assessment: "Quiet and considered slightly drawish, but used as a low-theory practical weapon — easy to play with simple plans (Bd3, c3, Nf3, Bf4).",
+    tier: "B",
+    popularity: 2
+  },
+  {
     name: "Caro-Kann Two Knights",
     eco: "B11",
     moves: ["e4","c6","Nc3","d5","Nf3"],
@@ -1116,6 +1170,7 @@ const BEGINNER_FRIENDLY_OPENINGS = new Set([
   "Sicilian Alapin", "Sicilian Closed",
   "French Defense", "French Advance", "French Tarrasch", "French Exchange",
   "Caro-Kann Defense", "Caro-Kann Classical", "Caro-Kann Advance",
+  "Caro-Kann Exchange",
   "Scandinavian Defense",
   "Queen's Gambit", "Queen's Gambit Accepted", "Queen's Gambit Declined",
   "Slav Defense", "London System", "Torre Attack", "Colle System",
@@ -1137,8 +1192,11 @@ const INTERMEDIATE_FRIENDLY_OPENINGS = new Set([
   "Catalan Opening", "English Opening",
   // All B-tier
   "Giuoco Piano", "Two Knights Defense", "Scotch Game", "Sicilian Alapin",
+  "Sicilian Rossolimo", "Moscow Variation",
   "French Winawer", "French Tarrasch", "Caro-Kann Classical",
-  "Caro-Kann Advance", "Queen's Gambit Accepted", "London System",
+  "Caro-Kann Advance", "Caro-Kann Fantasy Variation", "Caro-Kann Exchange",
+  "Austrian Attack", "150 Attack",
+  "Queen's Gambit Accepted", "London System",
   "Trompowsky Attack", "Réti Opening",
   // Selected C-tier (sound non-system mainlines worth studying)
   "Sicilian Kan", "Accelerated Dragon", "Sicilian Closed",
@@ -1167,7 +1225,7 @@ const GM_FRIENDLY_OPENINGS = new Set([
   "Ruy Lopez", "Berlin Defense", "Scotch Game", "Petrov's Defense",
   "Sicilian Defense", "Sicilian Najdorf", "Sicilian Dragon",
   "Sicilian Sveshnikov", "Sicilian Scheveningen", "Sicilian Taimanov",
-  "Sicilian Alapin",
+  "Sicilian Alapin", "Sicilian Rossolimo", "Moscow Variation",
   "French Defense", "French Winawer", "French Tarrasch",
   "Caro-Kann Defense", "Caro-Kann Classical", "Caro-Kann Advance",
   "Queen's Gambit", "Queen's Gambit Accepted", "Queen's Gambit Declined",
@@ -1229,6 +1287,8 @@ const PREREQUISITES = {
   "Sicilian Closed": ["Sicilian Defense"],
   "Smith-Morra Gambit": ["Sicilian Defense"],
   "Grand Prix Attack": ["Sicilian Defense"],
+  "Sicilian Rossolimo": ["Sicilian Defense"],
+  "Moscow Variation": ["Sicilian Defense"],
   "Richter-Rauzer Attack": ["Sicilian Defense"],
   // Sicilian sub-variations of named lines
   "Najdorf English Attack": ["Sicilian Najdorf"],
@@ -1252,7 +1312,13 @@ const PREREQUISITES = {
   "Caro-Kann Two Knights": ["Caro-Kann Defense"],
   "Caro-Kann Karpov": ["Caro-Kann Defense"],
   "Caro-Kann Tartakower": ["Caro-Kann Defense"],
+  "Caro-Kann Fantasy Variation": ["Caro-Kann Defense"],
+  "Caro-Kann Exchange": ["Caro-Kann Defense"],
   "Panov-Botvinnik Attack": ["Caro-Kann Defense"],
+
+  // Anti-Pirc / anti-Modern systems unlock once the parent is studied
+  "Austrian Attack": ["Pirc Defense"],
+  "150 Attack": ["Pirc Defense"],
 
   // Queen's Gambit family
   "Queen's Gambit Accepted": ["Queen's Gambit"],
