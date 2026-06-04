@@ -343,6 +343,20 @@ body {
   font-size: 13px;
 }
 
+/* Small text label below the board / eval bar showing whatever opening
+   the current board position belongs to. Hidden mid-question so it
+   doesn't spoil the answer. */
+.current-opening {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin: -4px 0 0;
+  min-height: 1.4em;
+}
+.current-opening.hidden { display: none; }
+
 .panel {
   background: var(--bg-elev);
   border: 1px solid var(--border);

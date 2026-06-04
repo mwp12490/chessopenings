@@ -1508,6 +1508,7 @@
 
   // ===== UI rendering =====
   function renderPanel(isAfterAnswer) {
+    updateCurrentOpeningLabel();
     if (currentMode === "practice") {
       if (modeState.questionType === "setup") renderSetupPanel();
       else if (modeState.questionType === "play" || modeState.questionType === "playmystery") renderPlayPanel();
@@ -2714,6 +2715,52 @@
     else if (game.in_stalemate()) turnEl.textContent = "Stalemate";
     else if (game.in_draw()) turnEl.textContent = "Draw";
     else turnEl.textContent = (game.turn() === "w" ? "White" : "Black") + " to move" + (game.in_check() ? " (check)" : "");
+    updateCurrentOpeningLabel();
+  }
+
+  // Small text shown below the board with the current opening's name —
+  // hidden while a question is mid-flight so it doesn't spoil the answer.
+  function updateCurrentOpeningLabel() {
+    const el = document.getElementById("current-opening");
+    if (!el) return;
+    const name = currentOpeningLabel();
+    if (name) {
+      el.textContent = name;
+      el.classList.remove("hidden");
+    } else {
+      el.textContent = "";
+      el.classList.add("hidden");
+    }
+  }
+
+  function currentOpeningLabel() {
+    if (currentMode === "tricks") {
+      if (modeState.trick && modeState.complete) return modeState.trick.name;
+      return null;
+    }
+    if (currentMode === "explore") {
+      if (modeState.selected) return modeState.selected.name;
+      return null;
+    }
+    if (currentMode === "practice") {
+      const t = modeState.questionType;
+      if (t === "identify") {
+        return modeState.answered && modeState.opening ? modeState.opening.name : null;
+      }
+      if (t === "setup") {
+        return modeState.complete && modeState.opening ? modeState.opening.name : null;
+      }
+      if (t === "play") {
+        return modeState.opening ? modeState.opening.name : null;
+      }
+      if (t === "playmystery") {
+        if (modeState.complete && modeState.nameAnswered && modeState.matchedOpening) {
+          return modeState.matchedOpening.name;
+        }
+        return null;
+      }
+    }
+    return null;
   }
 
   function renderScore() {
