@@ -1509,6 +1509,7 @@
   // ===== UI rendering =====
   function renderPanel(isAfterAnswer) {
     updateCurrentOpeningLabel();
+    updateGameScoreLabel();
     if (currentMode === "practice") {
       if (modeState.questionType === "setup") renderSetupPanel();
       else if (modeState.questionType === "play" || modeState.questionType === "playmystery") renderPlayPanel();
@@ -2716,6 +2717,7 @@
     else if (game.in_draw()) turnEl.textContent = "Draw";
     else turnEl.textContent = (game.turn() === "w" ? "White" : "Black") + " to move" + (game.in_check() ? " (check)" : "");
     updateCurrentOpeningLabel();
+    updateGameScoreLabel();
   }
 
   // Small text shown below the board with the current opening's name —
@@ -2731,6 +2733,23 @@
       el.textContent = "";
       el.classList.add("hidden");
     }
+  }
+
+  // Move list (game score) below the board — short, scrollable, always
+  // reflects the moves actually played in chess.js (so it tracks free
+  // play in Explore, the played line in Practice/Play, and the auto-
+  // played continuation in Tricks).
+  function updateGameScoreLabel() {
+    const el = document.getElementById("game-score");
+    if (!el) return;
+    const history = game.history();
+    if (!history.length) {
+      el.textContent = "";
+      el.classList.add("hidden");
+      return;
+    }
+    el.classList.remove("hidden");
+    el.textContent = formatNumberedSan(history);
   }
 
   function currentOpeningLabel() {
