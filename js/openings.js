@@ -1168,6 +1168,7 @@ const BEGINNER_FRIENDLY_OPENINGS = new Set([
   "Italian Game", "Giuoco Piano", "Two Knights Defense", "Scotch Game",
   "Four Knights Game", "Vienna Game", "Bishop's Opening", "Petrov's Defense",
   "Sicilian Alapin", "Sicilian Closed",
+  "Smith-Morra Gambit", "Grand Prix Attack",
   "French Defense", "French Advance", "French Tarrasch", "French Exchange",
   "Caro-Kann Defense", "Caro-Kann Classical", "Caro-Kann Advance",
   "Caro-Kann Exchange",
@@ -1193,6 +1194,7 @@ const INTERMEDIATE_FRIENDLY_OPENINGS = new Set([
   // All B-tier
   "Giuoco Piano", "Two Knights Defense", "Scotch Game", "Sicilian Alapin",
   "Sicilian Rossolimo", "Moscow Variation",
+  "Smith-Morra Gambit", "Grand Prix Attack",
   "French Winawer", "French Tarrasch", "Caro-Kann Classical",
   "Caro-Kann Advance", "Caro-Kann Fantasy Variation", "Caro-Kann Exchange",
   "Austrian Attack", "150 Attack",
