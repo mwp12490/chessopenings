@@ -81,6 +81,15 @@
   // Elo filter is { min, max } when active (study openings whose level
   // overlaps that range) or null when disabled.
   let eloFilter = loadEloFilter();
+
+  // ===== Mode dispatcher state =====
+  // Declared early because updateTurnIndicator (called at startup, below)
+  // touches them indirectly through updateCurrentOpeningLabel. Leaving
+  // them in the original position triggered a Temporal Dead Zone error
+  // that killed the rest of the IIFE.
+  let currentMode = "practice";
+  let modeState = {}; // per-mode mutable state
+
   renderScore();
 
   validateOpenings();
@@ -145,8 +154,8 @@
   });
 
   // ===== Mode dispatcher =====
-  let currentMode = "practice";
-  let modeState = {}; // per-mode mutable state
+  // (currentMode / modeState are declared earlier so updateTurnIndicator
+  // at startup can safely read them through updateCurrentOpeningLabel.)
 
   document.getElementById("modes").addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-mode]");
